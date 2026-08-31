@@ -18,6 +18,9 @@
 
 # misc
 .DS_Store
+/.sites-package-stage/
+/.crashlens-site.tar.gz
+*.tsbuildinfo
 *.pem
 
 # debug
