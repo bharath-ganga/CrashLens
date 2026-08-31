@@ -1,0 +1,17 @@
+2026-08-31 14:26:00 INFO service=payment-service Deployment #318 completed version=4.12.0
+2026-08-31 14:29:00 WARN service=payment-service Database connections increased from 42 to 118
+2026-08-31 14:31:00 WARN service=checkout-api API latency p95 increased to 1.8s
+2026-08-31 14:32:00 ERROR service=payment-service Payment failed: database connection timeout order_id=84721
+2026-08-31 14:32:04 ERROR service=payment-service Payment failed: database connection timeout order_id=84722
+2026-08-31 14:32:08 ERROR service=payment-service Payment failed: database connection timeout order_id=84723
+2026-08-31 14:32:12 ERROR service=checkout-api Checkout failed because payment request timed out
+2026-08-31 14:32:16 ERROR service=checkout-api Checkout failed because payment request timed out
+2026-08-31 14:34:00 FATAL service=checkout-api SLO alert triggered: checkout error rate reached 12.4%
+2026-08-31 14:36:00 WARN service=media-worker Memory usage increased above 86 percent
+2026-08-31 14:36:30 ERROR service=media-worker OutOfMemoryError while processing image job 9912
+2026-08-31 14:36:34 ERROR service=media-worker OutOfMemoryError while processing image job 9913
+2026-08-31 14:37:00 WARN service=identity-api Redis failover started on cache-primary
+2026-08-31 14:39:00 ERROR service=identity-api Authentication failed: token lookup timed out user_id=441
+2026-08-31 14:39:05 ERROR service=identity-api Authentication failed: token lookup timed out user_id=442
+2026-08-31 14:40:00 WARN service=gateway Rate limit reached for checkout route
+2026-08-31 14:41:00 INFO service=payment-service Rollback to version 4.11.3 started
