@@ -1,0 +1,18 @@
+CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT NOT NULL, name TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS teams (id TEXT PRIMARY KEY, name TEXT NOT NULL, created_by TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS team_members (team_id TEXT NOT NULL, user_id TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'member', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (team_id, user_id));
+CREATE TABLE IF NOT EXISTS team_invites (id TEXT PRIMARY KEY, team_id TEXT NOT NULL, email TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'member', status TEXT NOT NULL DEFAULT 'pending', invited_by TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS ingestions (id TEXT PRIMARY KEY, team_id TEXT NOT NULL, filename TEXT NOT NULL, format TEXT NOT NULL, row_count INTEGER NOT NULL, file_key TEXT, created_by TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS incidents (id TEXT PRIMARY KEY, team_id TEXT NOT NULL, ingestion_id TEXT, title TEXT NOT NULL, service TEXT NOT NULL, severity TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'investigating', trigger_text TEXT, confidence INTEGER NOT NULL DEFAULT 0, fingerprint TEXT NOT NULL, started_at TEXT NOT NULL, last_seen_at TEXT NOT NULL, log_count INTEGER NOT NULL DEFAULT 0, assigned_to TEXT, created_by TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS incident_logs (id TEXT PRIMARY KEY, incident_id TEXT NOT NULL, timestamp TEXT NOT NULL, level TEXT NOT NULL, service TEXT NOT NULL, message TEXT NOT NULL, raw_redacted TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS comments (id TEXT PRIMARY KEY, incident_id TEXT NOT NULL, user_id TEXT NOT NULL, body TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS connectors (id TEXT PRIMARY KEY, team_id TEXT NOT NULL, type TEXT NOT NULL, name TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'awaiting_credentials', config_json TEXT NOT NULL DEFAULT '{}', created_by TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS alert_rules (id TEXT PRIMARY KEY, team_id TEXT NOT NULL, channel TEXT NOT NULL, minimum_severity TEXT NOT NULL DEFAULT 'critical', enabled INTEGER NOT NULL DEFAULT 1, created_by TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS audit_events (id TEXT PRIMARY KEY, team_id TEXT NOT NULL, actor_id TEXT NOT NULL, action TEXT NOT NULL, target_type TEXT NOT NULL, target_id TEXT NOT NULL, metadata_json TEXT NOT NULL DEFAULT '{}', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX IF NOT EXISTS idx_incidents_team_updated ON incidents(team_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_incidents_team_status ON incidents(team_id, status);
+CREATE INDEX IF NOT EXISTS idx_incident_logs_incident ON incident_logs(incident_id, timestamp);
+CREATE INDEX IF NOT EXISTS idx_comments_incident ON comments(incident_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_connectors_team ON connectors(team_id, type);
+CREATE INDEX IF NOT EXISTS idx_audit_team_created ON audit_events(team_id, created_at DESC);
+PRAGMA optimize;
