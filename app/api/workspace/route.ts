@@ -39,6 +39,7 @@ export async function GET(request: Request) {
     capabilities: {
       database: true, objectStorage: true,
       openai: Boolean(ctx.runtime.OPENAI_API_KEY), slack: Boolean(ctx.runtime.SLACK_WEBHOOK_URL),
+      email: Boolean(ctx.runtime.EMAIL_WEBHOOK_URL),
       externalIngestion: Boolean(ctx.runtime.INGESTION_TOKEN), piiRedaction: true,
     },
   });
@@ -115,6 +116,12 @@ export async function POST(request: Request) {
     if (!ctx.runtime.SLACK_WEBHOOK_URL) return json({ error: 'SLACK_WEBHOOK_URL is not configured', configured: false }, 503);
     const response = await fetch(ctx.runtime.SLACK_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: '✅ CrashLens alert connection verified.' }) });
     if (!response.ok) return json({ error: 'Slack rejected the test alert' }, 502);
+    return json({ ok: true, configured: true });
+  }
+  if (action === 'test_email') {
+    if (!ctx.runtime.EMAIL_WEBHOOK_URL) return json({ error: 'EMAIL_WEBHOOK_URL is not configured', configured: false }, 503);
+    const response = await fetch(ctx.runtime.EMAIL_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject: 'CrashLens alert connection verified', text: 'CrashLens email alert delivery is working.' }) });
+    if (!response.ok) return json({ error: 'Email webhook rejected the test alert' }, 502);
     return json({ ok: true, configured: true });
   }
   return json({ error: 'Unknown action' }, 400);

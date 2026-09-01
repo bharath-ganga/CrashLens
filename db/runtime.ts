@@ -7,6 +7,7 @@ export type CrashLensEnv = Cloudflare.Env & {
   FILES: R2Bucket;
   OPENAI_API_KEY?: string;
   SLACK_WEBHOOK_URL?: string;
+  EMAIL_WEBHOOK_URL?: string;
   INGESTION_TOKEN?: string;
 };
 
