@@ -35,5 +35,13 @@ export async function saveAnalysis(env: CrashLensEnv, teamId: string, actorId: s
     for (let index = 0; index < logStatements.length; index += 50) await env.DB.batch(logStatements.slice(index, index + 50));
   }
   await audit(env.DB, teamId, actorId, 'analysis.saved', 'ingestion', ingestionId, { filename: input.filename, incidents: input.incidents.length, rows: input.rowCount });
+  const critical = input.incidents.filter((incident) => incident.severity === 'critical');
+  if (critical.length) {
+    const summary = `CrashLens detected ${critical.length} critical incident${critical.length === 1 ? '' : 's'} in ${input.filename}: ${critical.slice(0, 3).map((incident) => `${incident.title} (${incident.service})`).join(', ')}`;
+    const deliveries: Promise<Response>[] = [];
+    if (env.SLACK_WEBHOOK_URL) deliveries.push(fetch(env.SLACK_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: `🚨 ${summary}` }) }));
+    if (env.EMAIL_WEBHOOK_URL) deliveries.push(fetch(env.EMAIL_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject: 'CrashLens critical incident alert', text: summary, severity: 'critical', ingestionId }) }));
+    if (deliveries.length) await Promise.allSettled(deliveries);
+  }
   return ingestionId;
 }
