@@ -72,6 +72,7 @@ export default function Home() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [comment, setComment] = useState('');
   const [historyIncidentId, setHistoryIncidentId] = useState('');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   const selected = incidents.find((incident) => incident.id === selectedId) ?? incidents[0];
   const filteredIncidents = useMemo(() => incidents.filter((incident) =>
@@ -178,56 +179,57 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#070a0d] text-[#dbe6df]">
-      <header className="sticky top-0 z-30 flex h-14 items-center border-b border-[#26312b] bg-[#0a0e11] px-4 lg:px-6">
-        <button aria-label="Open navigation" className="mr-3 text-[#738078] lg:hidden"><Menu size={18} /></button>
+    <main className="min-h-screen bg-[#030504] text-[#e8eee9]">
+      <header className="sticky top-0 z-50 flex h-16 items-center border-b-2 border-[#d6ff00] bg-[#050806] px-4 lg:px-6">
+        <button aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'} onClick={() => setMobileNavOpen((open) => !open)} className="mr-3 grid size-9 place-items-center border border-[#344139] bg-[#0b100d] text-[#d6ff00] lg:hidden">{mobileNavOpen ? <X size={19} /> : <Menu size={19} />}</button>
         <div className="flex items-center gap-2.5">
-          <span className="grid size-8 place-items-center bg-[#d6ff00] text-[#080a00]"><Activity size={18} strokeWidth={2.5} /></span>
-          <span className="text-sm font-bold tracking-[-0.03em] text-white">CRASHLENS</span>
-          <span className="border border-[#3a463f] bg-[#111612] px-1.5 py-0.5 font-mono text-[9px] text-[#a7b2ab]">CORE_03</span>
+          <span className="grid size-9 place-items-center bg-[#d6ff00] text-[#050700]"><Activity size={19} strokeWidth={3} /></span>
+          <span className="text-base font-black tracking-[-0.04em] text-white">CRASHLENS</span>
+          <span className="border border-[#4a5a50] bg-[#0b100d] px-2 py-1 font-mono text-[11px] font-bold text-[#d6ff00]">PROD / 05</span>
         </div>
-        <div className="ml-6 hidden h-full items-center border-l border-[#26312b] px-5 text-[11px] text-[#718078] md:flex">
-          <span className="mr-2 size-1.5 bg-[#d6ff00]" /> ANALYSIS ENGINE ONLINE
+        <div className="ml-8 hidden h-full items-center border-x border-[#26312b] px-5 font-mono text-xs text-[#a8b4ac] md:flex">
+          <span className="mr-2 size-2 bg-[#d6ff00]" /> ANALYSIS ENGINE / ONLINE
         </div>
         <div className="ml-auto flex items-center gap-3 font-mono text-[10px] text-[#718078]">
-          <span className="hidden sm:inline">{workspaceBusy ? 'SYNCING' : workspace ? 'D1 + R2 CONNECTED' : 'LOCAL FALLBACK'}</span>
+          <span className="hidden border border-[#2d3932] bg-[#0b100d] px-2 py-1 sm:inline">{workspaceBusy ? 'SYNCING' : workspace ? 'D1 + R2 CONNECTED' : 'LOCAL FALLBACK'}</span>
           <span className="h-4 w-px bg-[#26312b]" />
-          <span className="grid size-7 place-items-center bg-[#1a2520] font-sans font-bold text-[#d6ff00]">BK</span>
+          <span className="grid size-8 place-items-center bg-[#00d9ff] font-sans text-xs font-black text-[#001014]">BK</span>
         </div>
       </header>
 
-      <div className="flex min-h-[calc(100vh-56px)]">
-        <aside className="hidden w-52 shrink-0 border-r border-[#26312b] bg-[#090d0f] p-3 lg:flex lg:flex-col">
-          <p className="px-2 pb-2 pt-3 font-mono text-[9px] tracking-[0.16em] text-[#536058]">WORKSPACE</p>
+      {mobileNavOpen && <button aria-label="Close navigation overlay" onClick={() => setMobileNavOpen(false)} className="fixed inset-0 top-16 z-30 bg-[#030504] lg:hidden" />}
+      <div className="flex min-h-[calc(100vh-64px)]">
+        <aside className={`${mobileNavOpen ? 'fixed inset-y-16 left-0 z-40 flex' : 'hidden'} w-64 shrink-0 flex-col border-r-2 border-[#26312b] bg-[#070b08] p-3 lg:static lg:flex`}>
+          <p className="px-3 pb-3 pt-4 font-mono text-xs font-bold tracking-[0.18em] text-[#718078]">CONTROL PLANE</p>
           <nav className="space-y-1">
             {([
               ['incidents', AlertTriangle, 'Incidents'], ['history', History, 'History'], ['team', Users, 'Team'],
               ['integrations', Plug, 'Integrations'], ['monitoring', HeartPulse, 'Monitoring'],
-            ] as Array<[WorkspaceView, LucideIcon, string]>).map(([key, Icon, label]) => <button key={key} onClick={() => setView(key)} className={`flex h-9 w-full items-center gap-2.5 border-l-2 px-3 text-xs ${view === key ? 'border-[#d6ff00] bg-[#171d0f] text-white' : 'border-transparent text-[#7f8e85] hover:bg-[#111714] hover:text-white'}`}><Icon size={14} className={view === key ? 'text-[#d6ff00]' : ''} />{label}{key === 'incidents' && <span className="ml-auto bg-[#d6ff00] px-1.5 py-0.5 font-mono text-[9px] font-bold text-black">{incidents.length}</span>}</button>)}
-            <button onClick={() => setUploadOpen(true)} className="flex h-9 w-full items-center gap-2.5 border-l-2 border-transparent px-3 text-xs text-[#7f8e85] hover:bg-[#111714] hover:text-white"><Database size={14} />Upload source</button>
+            ] as Array<[WorkspaceView, LucideIcon, string]>).map(([key, Icon, label], index) => <button key={key} onClick={() => { setView(key); setMobileNavOpen(false); }} className={`flex h-11 w-full items-center gap-3 border px-3 text-sm font-semibold ${view === key ? 'border-[#d6ff00] bg-[#d6ff00] text-[#050700]' : 'border-transparent text-[#849189] hover:border-[#344139] hover:bg-[#0d130f] hover:text-white'}`}><span className="font-mono text-[11px] opacity-60">0{index + 1}</span><Icon size={15} />{label}{key === 'incidents' && <span className={`ml-auto px-1.5 py-0.5 font-mono text-[10px] font-black ${view === key ? 'bg-[#050700] text-[#d6ff00]' : 'bg-[#243028] text-white'}`}>{incidents.length}</span>}</button>)}
+            <button onClick={() => { setUploadOpen(true); setMobileNavOpen(false); }} className="mt-3 flex h-11 w-full items-center gap-3 border border-[#00d9ff] bg-[#07171b] px-3 text-sm font-bold text-[#00d9ff] hover:bg-[#00d9ff] hover:text-[#001014]"><Database size={15} />Upload source</button>
           </nav>
-          <p className="px-2 pb-2 pt-7 font-mono text-[9px] tracking-[0.16em] text-[#536058]">CURRENT SOURCE</p>
-          <div className="border border-[#26312b] bg-[#0d1310] p-3">
-            <div className="mb-2 flex items-center gap-2 text-[10px] text-[#d6ff00]"><CheckCircle2 size={12} />PARSED</div>
-            <p className="truncate text-[11px] text-[#c7d2cb]" title={filename}>{filename}</p>
-            <p className="mt-1 font-mono text-[9px] text-[#59665e]">{logs.length} ROWS / {fileSize}</p>
+          <p className="px-3 pb-2 pt-8 font-mono text-xs font-bold tracking-[0.16em] text-[#718078]">CURRENT SOURCE</p>
+          <div className="border border-[#344139] bg-[#0b100d] p-4">
+            <div className="mb-2 flex items-center gap-2 text-xs font-bold text-[#d6ff00]"><CheckCircle2 size={14} />PARSED</div>
+            <p className="truncate text-sm text-[#d8e2dc]" title={filename}>{filename}</p>
+            <p className="mt-2 font-mono text-[11px] text-[#718078]">{logs.length} ROWS / {fileSize}</p>
           </div>
           <div className="mt-auto border-t border-[#26312b] pt-3">
-            <div className="flex items-center gap-2 px-2 text-[10px] text-[#65736b]"><ShieldCheck size={13} />PII redaction active</div>
+            <div className="flex items-center gap-2 px-2 text-xs text-[#849189]"><ShieldCheck size={14} className="text-[#00d9ff]" />PII REDACTION / ACTIVE</div>
           </div>
         </aside>
 
         <div className="min-w-0 flex-1">
-          <section className="border-b border-[#26312b] bg-[#0b1012] px-4 py-5 lg:px-6">
+          <section className="border-b-2 border-[#26312b] bg-[#080c09] px-4 py-6 lg:px-8">
             <div className="mx-auto flex max-w-[1500px] flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
-                <div className="mb-1 flex items-center gap-2 font-mono text-[9px] tracking-[0.16em] text-[#65736b]"><span>OPS</span><ChevronRight size={10} /><span>{view.toUpperCase()}</span><ChevronRight size={10} /><span className="text-[#d6ff00]">{workspaceMessage.toUpperCase()}</span></div>
-                <h1 className="text-[22px] font-semibold tracking-[-0.035em] text-white">{view === 'incidents' ? 'Production error investigation' : `${view[0].toUpperCase()}${view.slice(1)} control plane`}</h1>
-                <p className="mt-1 text-xs text-[#718078]">Authenticated incident operations with durable storage, audit history, integrations, and alert readiness.</p>
+                <div className="mb-2 flex items-center gap-2 font-mono text-[11px] font-bold tracking-[0.16em] text-[#718078]"><span>OPS</span><ChevronRight size={12} /><span>{view.toUpperCase()}</span><ChevronRight size={12} /><span className="text-[#d6ff00]">{workspaceMessage.toUpperCase()}</span></div>
+                <h1 className="text-2xl font-black tracking-[-0.045em] text-white lg:text-[32px]">{view === 'incidents' ? 'Production error investigation' : `${view[0].toUpperCase()}${view.slice(1)} control plane`}</h1>
+                <p className="mt-2 text-sm text-[#91a097]">Authenticated incident operations with durable storage, audit history, integrations, and alert readiness.</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <a href="/samples/crashlens-sample.jsonl" download className="flex h-9 items-center gap-2 border border-[#314039] bg-[#0d1310] px-3 text-[11px] text-[#a9b6ae] hover:border-[#53665b] hover:text-white"><Download size={13} />SAMPLE JSONL</a>
-                <button onClick={() => setUploadOpen(true)} className="flex h-9 items-center gap-2 border border-[#d6ff00] bg-[#d6ff00] px-4 text-[11px] font-bold text-[#080a00] hover:bg-[#e2ff58]"><Upload size={14} />ANALYZE FILE</button>
+                <a href="/samples/crashlens-sample.jsonl" download className="flex h-11 items-center gap-2 border border-[#4a5a50] bg-[#0b100d] px-4 text-xs font-bold text-[#c7d2cb] hover:border-white hover:text-white"><Download size={15} />SAMPLE JSONL</a>
+                <button onClick={() => setUploadOpen(true)} className="flex h-11 items-center gap-2 border border-[#d6ff00] bg-[#d6ff00] px-5 text-xs font-black text-[#050700] hover:bg-white"><Upload size={15} />ANALYZE FILE</button>
               </div>
             </div>
           </section>
@@ -236,11 +238,11 @@ export default function Home() {
             {error && <div role="alert" className="mb-4 flex items-start gap-3 border border-[#a53d3d] bg-[#200d0f] p-3 text-xs text-[#ff8585]"><AlertTriangle size={15} className="mt-0.5 shrink-0" /><span>{error}</span><button onClick={() => setError('')} className="ml-auto"><X size={14} /></button></div>}
 
             {view === 'incidents' ? <>
-            <section className="mb-4 grid grid-cols-2 border-l border-t border-[#26312b] xl:grid-cols-4">
+            <section className="mb-4 grid grid-cols-2 border-l-2 border-t-2 border-[#344139] xl:grid-cols-4">
               {metrics.map(({ label, value, note, icon: Icon }) => <article key={label} className="border-b border-r border-[#26312b] bg-[#0d1215] p-4">
-                <div className="flex items-center justify-between font-mono text-[9px] tracking-[0.12em] text-[#65736b]"><span>{label}</span><Icon size={13} /></div>
-                <div className="mt-3 text-2xl font-semibold tracking-[-0.04em] text-white">{value}</div>
-                <p className="mt-1 text-[10px] text-[#647168]">{note}</p>
+                <div className="flex items-center justify-between font-mono text-[11px] font-bold tracking-[0.12em] text-[#849189]"><span>{label}</span><Icon size={15} /></div>
+                <div className="mt-3 text-3xl font-black tracking-[-0.04em] text-white">{value}</div>
+                <p className="mt-1 text-xs text-[#718078]">{note}</p>
               </article>)}
             </section>
 
@@ -261,7 +263,7 @@ export default function Home() {
             <section id="incidents" className="grid min-h-[610px] border border-[#26312b] bg-[#0b1012] xl:grid-cols-[430px_minmax(0,1fr)]">
               <div className="border-b border-[#26312b] xl:border-b-0 xl:border-r">
                 <div className="border-b border-[#26312b] p-3">
-                  <label className="flex h-9 items-center gap-2 border border-[#26312b] bg-[#080c0e] px-3 text-[#65736b] focus-within:border-[#53665b]"><Search size={13} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter incidents or services" className="w-full bg-transparent text-[11px] text-white outline-none placeholder:text-[#48534c]" /><Filter size={12} /></label>
+                  <label className="flex h-11 items-center gap-2 border border-[#344139] bg-[#080c0e] px-3 text-[#849189] focus-within:border-[#d6ff00]"><Search size={15} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter incidents or services" className="w-full bg-[#080c0e] text-sm text-white outline-none placeholder:text-[#59665e]" /><Filter size={14} /></label>
                 </div>
                 <div className="flex items-center justify-between border-b border-[#26312b] px-4 py-3 font-mono text-[9px] tracking-[0.12em] text-[#65736b]"><span>GROUPED INCIDENTS</span><span>{filteredIncidents.length} RESULTS</span></div>
                 <div className="max-h-[535px] overflow-y-auto">
@@ -322,8 +324,8 @@ export default function Home() {
         </div>
       </div>
 
-      {uploadOpen && <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-4">
-        <div className="w-full max-w-xl border border-[#3a473f] bg-[#0c1113] shadow-[12px_12px_0_#000]">
+      {uploadOpen && <div className="fixed inset-0 z-50 grid place-items-center bg-[#030504] p-4">
+        <div className="w-full max-w-xl border-2 border-[#d6ff00] bg-[#0c1113] shadow-[12px_12px_0_#000]">
           <div className="flex items-start justify-between border-b border-[#2a352f] p-5"><div><p className="font-mono text-[9px] tracking-[0.14em] text-[#d6ff00]">DATA INGESTION</p><h2 className="mt-1 text-lg font-semibold text-white">Analyze a log file</h2><p className="mt-1 text-[11px] text-[#718078]">Analysis runs in the browser, then a redacted copy is saved to your authenticated workspace.</p></div><button onClick={() => setUploadOpen(false)} className="text-[#65736b] hover:text-white"><X size={18} /></button></div>
           <input ref={inputRef} type="file" accept=".txt,.log,.csv,.jsonl,.ndjson" onChange={onFile} className="hidden" />
           <button type="button" onDragOver={(event) => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={onDrop} onClick={() => inputRef.current?.click()} className={`m-5 grid min-h-52 w-[calc(100%-2.5rem)] cursor-pointer place-items-center border border-dashed p-6 text-center ${dragging ? 'border-[#d6ff00] bg-[#171d0f]' : 'border-[#3a473f] bg-[#090d0f] hover:border-[#66786c]'}`}>
