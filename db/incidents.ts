@@ -1,5 +1,6 @@
 import type { Incident } from '@/lib/log-analyzer';
 import { audit, redactSensitiveData, type CrashLensEnv } from './runtime';
+import { queueTeamEmail, flushEmails } from './email';
 
 type SaveAnalysisInput = {
   filename: string;
@@ -33,6 +34,8 @@ export async function saveAnalysis(env: CrashLensEnv, teamId: string, actorId: s
       'INSERT INTO incident_logs (id, incident_id, timestamp, level, service, message, raw_redacted) VALUES (?, ?, ?, ?, ?, ?, ?)'
     ).bind(crypto.randomUUID(), incidentId, log.timestamp, log.level, log.service.slice(0, 100), redactSensitiveData(log.message).slice(0, 4000), redactSensitiveData(log.raw).slice(0, 8000)));
     for (let index = 0; index < logStatements.length; index += 50) await env.DB.batch(logStatements.slice(index, index + 50));
+    await queueTeamEmail(env, teamId, `incident:${incidentId}`, `CrashLens: ${redactSensitiveData(incident.title).slice(0,120)}`,
+      `${incident.severity.toUpperCase()} incident in ${redactSensitiveData(incident.service)}.\n${incident.logs.length} related logs.\nOpen CrashLens History to investigate.\nIncident: ${incidentId}`);
   }
   await audit(env.DB, teamId, actorId, 'analysis.saved', 'ingestion', ingestionId, { filename: input.filename, incidents: input.incidents.length, rows: input.rowCount });
   const critical = input.incidents.filter((incident) => incident.severity === 'critical');
@@ -43,5 +46,6 @@ export async function saveAnalysis(env: CrashLensEnv, teamId: string, actorId: s
     if (env.EMAIL_WEBHOOK_URL) deliveries.push(fetch(env.EMAIL_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject: 'CrashLens critical incident alert', text: summary, severity: 'critical', ingestionId }) }));
     if (deliveries.length) await Promise.allSettled(deliveries);
   }
+  await flushEmails(env);
   return ingestionId;
 }
