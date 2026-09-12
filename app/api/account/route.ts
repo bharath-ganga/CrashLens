@@ -159,14 +159,6 @@ export async function POST(request: Request) {
       );
       if (!account || !valid)
         return json({ error: 'Invalid email or password.' }, 401);
-      if (!account.verified)
-        return json(
-          {
-            error:
-              'Verify your email before signing in. Use Resend verification if needed.',
-          },
-          403,
-        );
       const token = randomToken();
       const digest = await tokenHash(token);
       const team = await ensureWorkspace(env.DB, account);
@@ -190,44 +182,33 @@ export async function POST(request: Request) {
     }
     if (!['signup', 'forgot', 'resend'].includes(action))
       return json({ error: 'Unknown action' }, 400);
+    if (action === 'signup') {
+      const name = String(body.name ?? '').trim().slice(0, 100);
+      if (!name || !validPassword(body.password))
+        return json({ error: 'Enter your name and a password between 12 and 128 characters.' }, 400);
+      if (account)
+        return json({ error: 'An account already uses this email. Sign in with your existing password, or use Forgot password.' }, 409);
+      const created = await env.DB.prepare(
+        'INSERT INTO accounts (id,email,name,password_hash) VALUES (?,?,?,?) ON CONFLICT(email) DO NOTHING RETURNING id',
+      ).bind(crypto.randomUUID(), email, name, await hashPassword(body.password)).first<{id:string}>();
+      if (!created)
+        return json({ error: 'An account already uses this email. Please sign in.' }, 409);
+      return json({ message: 'Account created. You can sign in now—no email verification required.' }, 201);
+    }
     if (!emailConfigured(env))
       return json(
         {
           error:
-            'Email sending is not configured. The administrator must connect a verified email sender before registration or password recovery is available.',
+            'Email sending is not configured. Password recovery requires an email sender. You can still create an account and sign in.',
         },
         503,
       );
     const origin = appOrigin(env);
-    let id = account?.id;
-    let name = String(body.name ?? '')
-      .trim()
-      .slice(0, 100);
-    if (action === 'signup') {
-      if (!validPassword(body.password) || !name)
-        return json(
-          {
-            error:
-              'Enter your name and a password between 12 and 128 characters.',
-          },
-          400,
-        );
-      if (account) return json({ message: generic });
-      id = crypto.randomUUID();
-      const encoded = await hashPassword(body.password);
-      await env.DB.prepare(
-        'INSERT INTO accounts (id,email,name,password_hash) VALUES (?,?,?,?)',
-      )
-        .bind(id, email, name, encoded)
-        .run();
-    } else if (
-      !account ||
-      (action === 'forgot' && !account.verified) ||
-      (action === 'resend' && account.verified)
-    )
+    const id = account?.id;
+    if (!account || (action === 'resend' && account.verified))
       return json({ message: generic });
     if (!id) return json({ message: generic });
-    name = account?.name ?? name;
+    const name = account.name;
     const raw = randomToken();
     const digest = await tokenHash(raw);
     const kind = action === 'forgot' ? 'reset' : 'verify';

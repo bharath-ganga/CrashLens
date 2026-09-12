@@ -14,7 +14,7 @@ Create a Resend account, verify a sender domain in its dashboard, and configure 
 - `EMAIL_FROM`: a verified address such as `CrashLens <alerts@yourdomain.com>`.
 - `APP_ORIGIN`: the exact HTTPS application origin, used for account email links. Never a request-supplied host.
 
-For local development put the same settings in ignored `.dev.vars`. Never commit credentials. Without the sender, registration and recovery return an explicit 503 rather than claiming a message was sent. Existing verified accounts can sign in; login notices wait in the outbox.
+For local development put the same settings in ignored `.dev.vars`. Never commit credentials. Registration and password-based sign-in do not require email delivery or email verification. Existing unverified accounts can sign in with their original password; duplicate signup never overwrites an account. Password recovery still requires a configured sender and a single-use email link. The `verified` field records actual email verification only; it is not an account activation flag. Email ownership is not proven by signup and must not grant access to any other user's workspace. Login notices wait in the outbox when delivery is unavailable.
 
 Email verification links expire in one hour; reset links in 30 minutes. Tokens are single-use, and their database lookup values are SHA-256 hashes. Resetting a password invalidates all sessions. Sessions use random tokens, HttpOnly/SameSite cookies and HTTPS Secure cookies. Authentication is rate limited. Passwords use salted Web Crypto PBKDF2-SHA256 (100,000 iterations, compatible with Workers), with a 12-character minimum. Assess password hashing cost and abuse limits for your production capacity before opening registration broadly.
 
