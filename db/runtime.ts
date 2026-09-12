@@ -1,5 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { schemaStatements } from './schema';
+import { sessionUser } from './accounts';
 export { redactSensitiveData } from '@/lib/security';
 
 export type CrashLensEnv = Cloudflare.Env & {
@@ -9,6 +10,10 @@ export type CrashLensEnv = Cloudflare.Env & {
   SLACK_WEBHOOK_URL?: string;
   EMAIL_WEBHOOK_URL?: string;
   INGESTION_TOKEN?: string;
+  RESEND_API_KEY?: string;
+  EMAIL_FROM?: string;
+  MONITOR_CRON_TOKEN?: string;
+  APP_ORIGIN?: string;
 };
 
 export function getRuntimeEnv(): CrashLensEnv {
@@ -25,7 +30,9 @@ export async function ensureDatabase(db: D1Database): Promise<void> {
   await schemaReady;
 }
 
-export function authenticatedUser(request: Request) {
+export async function authenticatedUser(request: Request) {
+  const account = await sessionUser(request);
+  if (account) return account;
   const id = request.headers.get('oai-authenticated-user-id');
   const email = request.headers.get('oai-authenticated-user-email');
   const encodedName = request.headers.get('oai-authenticated-user-full-name');
@@ -39,7 +46,8 @@ export function authenticatedUser(request: Request) {
 }
 
 export async function ensureWorkspace(db: D1Database, user: { id: string; email: string; name: string }) {
-  const teamId = 'team-crashlens-operations';
+  const membership = await db.prepare('SELECT team_id FROM team_members WHERE user_id = ? LIMIT 1').bind(user.id).first<{team_id:string}>();
+  const teamId = membership?.team_id ?? `team-${user.id}`;
   await db.batch([
     db.prepare('INSERT INTO users (id, email, name) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET email = excluded.email, name = excluded.name').bind(user.id, user.email, user.name),
     db.prepare('INSERT OR IGNORE INTO teams (id, name, created_by) VALUES (?, ?, ?)').bind(teamId, 'CrashLens Operations', user.id),

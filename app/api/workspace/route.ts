@@ -1,5 +1,6 @@
 import { audit, authenticatedUser, ensureDatabase, ensureWorkspace, getRuntimeEnv } from '@/db/runtime';
 import { saveAnalysis } from '@/db/incidents';
+import { emailConfigured, queueEmail, flushEmails } from '@/db/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,7 @@ function textValue(value: unknown, fallback = '') {
 }
 
 async function context(request: Request) {
-  const user = authenticatedUser(request);
+  const user = await authenticatedUser(request);
   if (!user) return null;
   const runtime = getRuntimeEnv();
   await ensureDatabase(runtime.DB);
@@ -39,13 +40,14 @@ export async function GET(request: Request) {
     capabilities: {
       database: true, objectStorage: true,
       openai: Boolean(ctx.runtime.OPENAI_API_KEY), slack: Boolean(ctx.runtime.SLACK_WEBHOOK_URL),
-      email: Boolean(ctx.runtime.EMAIL_WEBHOOK_URL),
+      email: emailConfigured(ctx.runtime),
       externalIngestion: Boolean(ctx.runtime.INGESTION_TOKEN), piiRedaction: true,
     },
   });
 }
 
 export async function POST(request: Request) {
+  if (request.headers.get('origin') && request.headers.get('origin') !== new URL(request.url).origin) return json({error:'Invalid origin'},403);
   const ctx = await context(request);
   if (!ctx) return json({ error: 'Authentication required' }, 401);
   const contentLength = Number(request.headers.get('content-length') ?? 0);
@@ -119,10 +121,10 @@ export async function POST(request: Request) {
     return json({ ok: true, configured: true });
   }
   if (action === 'test_email') {
-    if (!ctx.runtime.EMAIL_WEBHOOK_URL) return json({ error: 'EMAIL_WEBHOOK_URL is not configured', configured: false }, 503);
-    const response = await fetch(ctx.runtime.EMAIL_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject: 'CrashLens alert connection verified', text: 'CrashLens email alert delivery is working.' }) });
-    if (!response.ok) return json({ error: 'Email webhook rejected the test alert' }, 502);
-    return json({ ok: true, configured: true });
+    if (!emailConfigured(ctx.runtime)) return json({error:'Configure RESEND_API_KEY and EMAIL_FROM first.',configured:false},503);
+    await queueEmail(ctx.runtime,ctx.teamId,ctx.user.email,`test:${ctx.user.id}:${Math.floor(Date.now()/60000)}`,'CrashLens email test','Your CrashLens email test was requested successfully.');
+    const delivery = await flushEmails(ctx.runtime);
+    return json({ok:true,delivery});
   }
   return json({ error: 'Unknown action' }, 400);
 }
