@@ -66,6 +66,7 @@ export default function AccountPage() {
         window.location.assign('/');
         return;
       }
+      if (mode === 'signup') setMode('login');
       setMessage(data.message);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Request failed');
@@ -89,12 +90,12 @@ export default function AccountPage() {
         <h1 className="mt-8 text-3xl font-bold">{titles[mode]}</h1>
         {signedIn&&<button className="mt-4 border border-[#344139] p-3 text-sm" onClick={async()=>{const r=await fetch('/api/account',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'logout'})});if(r.ok){setSignedIn(false);setMessage('CrashLens session ended. Existing ChatGPT access is managed separately.');}}}>Sign out of CrashLens account</button>}
         <p className="mt-3 text-base text-[#91a097]">
-          Your incidents, monitors, and account notifications.
+          {mode === 'signup' ? 'Create an account and sign in immediately. No email verification required.' : 'Your incidents, monitors, and account notifications.'}
         </p>
         {configured === false && (
           <p className="mt-5 border border-[#e5a50a] p-3 text-sm text-[#ffc247]">
-            Email delivery awaits administrator setup. Registration and recovery
-            emails require a verified sender.
+            Email delivery awaits administrator setup. You can create an account
+            and sign in; password-reset emails are unavailable until setup is complete.
           </p>
         )}
         <form onSubmit={submit} className="mt-6 space-y-4">
@@ -145,7 +146,7 @@ export default function AccountPage() {
             </label>
           )}
           {mode === 'verify' && (
-            <p>Confirm your email to activate your account.</p>
+            <p>Confirm ownership of your email. Verification is optional for signing in.</p>
           )}
           {error && (
             <p
@@ -185,9 +186,6 @@ export default function AccountPage() {
             <>
               <button onClick={() => change('signup')}>Create account</button>
               <button onClick={() => change('forgot')}>Forgot password?</button>
-              <button onClick={() => change('resend')}>
-                Resend verification
-              </button>
             </>
           )}
         </nav>
