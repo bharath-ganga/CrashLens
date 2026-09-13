@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import UptimePanel from './uptime-panel';
+import AdminClientsPanel from './admin-clients-panel';
 import Link from 'next/link';
 import {
   analyzeLogs,
@@ -75,7 +76,8 @@ type WorkspaceView =
   | 'history'
   | 'team'
   | 'integrations'
-  | 'monitoring';
+  | 'monitoring'
+  | 'clients';
 
 function time(timestamp: string) {
   return new Date(timestamp).toLocaleTimeString('en-US', {
@@ -432,6 +434,9 @@ export default function Home() {
                 ['team', Users, 'Team'],
                 ['integrations', Plug, 'Integrations'],
                 ['monitoring', HeartPulse, 'Monitoring'],
+                ...(workspace?.capabilities.platformAdmin
+                  ? ([['clients', Users, 'Clients']] as const)
+                  : []),
               ] as Array<[WorkspaceView, LucideIcon, string]>
             ).map(([key, Icon, label], index) => (
               <button
@@ -1138,6 +1143,8 @@ function OperationsConsole({
         </div>
       </section>
     );
+
+  if (view === 'clients') return <AdminClientsPanel />;
 
   if (view === 'history')
     return (

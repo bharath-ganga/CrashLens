@@ -17,10 +17,22 @@ export type CrashLensEnv = Cloudflare.Env & {
   PAGERDUTY_ROUTING_KEY?: string;
   ALERT_WEBHOOK_URL?: string;
   ALERT_WEBHOOK_SECRET?: string;
+  ADMIN_EMAILS?: string;
 };
 
 export function getRuntimeEnv(): CrashLensEnv {
   return env as CrashLensEnv;
+}
+
+export function isPlatformAdmin(
+  runtime: CrashLensEnv,
+  user: { email: string },
+) {
+  const allowed = (runtime.ADMIN_EMAILS ?? '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+  return allowed.includes(user.email.trim().toLowerCase());
 }
 
 let schemaReady: Promise<void> | null = null;
