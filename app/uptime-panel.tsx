@@ -37,9 +37,9 @@ type Data = {
   error?: string;
 };
 const field =
-  'w-full border border-[#30433a] bg-[#050807] px-3 py-2.5 text-sm text-[#eef5f0] outline-none focus:border-[#54f28b]';
+  'w-full border border-[#354d79] bg-[#060a16] px-3 py-2.5 text-sm text-[#f2f6ff] outline-none focus:border-[#4da3ff]';
 const button =
-  'inline-flex items-center justify-center gap-2 border border-[#3a5145] bg-[#101813] px-3 py-2 text-sm font-semibold hover:bg-[#18241d] disabled:cursor-not-allowed disabled:opacity-40';
+  'inline-flex items-center justify-center gap-2 border border-[#405985] bg-[#15203a] px-3 py-2 text-sm font-semibold hover:bg-[#1d2e4c] disabled:cursor-not-allowed disabled:opacity-40';
 const empty: Data = {
   now: 0,
   projects: [],
@@ -106,7 +106,7 @@ function Form({
   return (
     <form
       onSubmit={submit}
-      className="border-t border-[#27372f] bg-[#0a100c] p-5"
+      className="border-t border-[#293d63] bg-[#0d1528] p-5"
     >
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <label className="text-sm">
@@ -278,7 +278,7 @@ function Form({
       <div className="mt-4 flex gap-3">
         <button
           disabled={busy}
-          className="bg-[#54f28b] px-5 py-2.5 font-bold text-[#031008]"
+          className="bg-[#4da3ff] px-5 py-2.5 font-bold text-[#041126]"
         >
           {busy ? 'Saving…' : monitor ? 'Save monitor' : 'Create monitor'}
         </button>
@@ -286,7 +286,7 @@ function Form({
           Cancel
         </button>
       </div>
-      <p className="mt-3 text-xs text-[#809087]">
+      <p className="mt-3 text-xs text-[#91a2c6]">
         Secret headers such as Authorization and Cookie are blocked. Redirects
         and private-network destinations are never followed.
       </p>
@@ -386,20 +386,20 @@ export default function UptimePanel() {
   );
   if (loading)
     return (
-      <section className="border border-[#27372f] bg-[#080d0a] p-8">
+      <section className="border border-[#293d63] bg-[#0a1020] p-8">
         Loading monitor control…
       </section>
     );
   return (
-    <section className="overflow-hidden border border-[#27372f] bg-[#070b08] text-[#edf4ef]">
-      <header className="border-b border-[#27372f] bg-[#0d1510] p-5">
+    <section className="overflow-hidden border border-[#293d63] bg-[#080d1a] text-[#edf3ff]">
+      <header className="border-b border-[#293d63] bg-[#101a30] p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="font-mono text-xs tracking-[.2em] text-[#54f28b]">
+            <p className="font-mono text-xs tracking-[.2em] text-[#4da3ff]">
               UPTIME CONTROL
             </p>
             <h2 className="mt-2 text-2xl font-bold">Endpoint monitoring</h2>
-            <p className="mt-1 text-sm text-[#91a097]">
+            <p className="mt-1 text-sm text-[#9aa9c7]">
               Checks, evidence, outages, performance, and notifications in one
               operations view.
             </p>
@@ -421,7 +421,7 @@ export default function UptimePanel() {
             </button>
           </div>
         </div>
-        <div className="mt-5 grid grid-cols-2 gap-px border border-[#27372f] bg-[#27372f] md:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-px border border-[#293d63] bg-[#293d63] md:grid-cols-4">
           <Metric label="MONITORS" value={String(monitors.length)} />
           <Metric
             label="ACTIVE"
@@ -446,13 +446,13 @@ export default function UptimePanel() {
           {error}
         </p>
       )}
-      <div className="grid border-b border-[#27372f] xl:grid-cols-[240px_1fr]">
-        <aside className="border-b border-[#27372f] bg-[#080d0a] p-4 xl:border-b-0 xl:border-r">
-          <p className="text-xs font-bold tracking-widest text-[#91a097]">
+      <div className="grid border-b border-[#293d63] xl:grid-cols-[240px_1fr]">
+        <aside className="border-b border-[#293d63] bg-[#0a1020] p-4 xl:border-b-0 xl:border-r">
+          <p className="text-xs font-bold tracking-widest text-[#9aa9c7]">
             PROJECTS
           </p>
           <button
-            className={`mt-3 w-full border p-3 text-left text-sm ${project === 'all' ? 'border-[#54f28b] bg-[#102219]' : 'border-[#27372f]'}`}
+            className={`mt-3 w-full border p-3 text-left text-sm ${project === 'all' ? 'border-[#4da3ff] bg-[#13294a]' : 'border-[#293d63]'}`}
             onClick={() => setProject('all')}
           >
             All projects{' '}
@@ -461,7 +461,7 @@ export default function UptimePanel() {
           {data.projects.map((p) => (
             <button
               key={String(p.id)}
-              className={`mt-2 w-full border p-3 text-left text-sm ${project === p.id ? 'border-[#54f28b] bg-[#102219]' : 'border-[#27372f]'}`}
+              className={`mt-2 w-full border p-3 text-left text-sm ${project === p.id ? 'border-[#4da3ff] bg-[#13294a]' : 'border-[#293d63]'}`}
               onClick={() => setProject(String(p.id))}
             >
               <FolderKanban className="mr-2 inline" size={14} />
@@ -487,16 +487,16 @@ export default function UptimePanel() {
               required
             />
             <button
-              className="border border-l-0 border-[#30433a] px-3"
+              className="border border-l-0 border-[#354d79] px-3"
               aria-label="Add project"
             >
               <Plus size={16} />
             </button>
           </form>
-          <div className="mt-6 border-t border-[#27372f] pt-4 text-xs text-[#91a097]">
+          <div className="mt-6 border-t border-[#293d63] pt-4 text-xs text-[#9aa9c7]">
             <p
               className={
-                data.schedulerActive ? 'text-[#54f28b]' : 'text-[#ffc247]'
+                data.schedulerActive ? 'text-[#4da3ff]' : 'text-[#ffc247]'
               }
             >
               {data.schedulerActive
@@ -525,7 +525,7 @@ export default function UptimePanel() {
           )}
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] text-left text-sm">
-              <thead className="border-b border-[#27372f] bg-[#0a100c] text-xs text-[#91a097]">
+              <thead className="border-b border-[#293d63] bg-[#0d1528] text-xs text-[#9aa9c7]">
                 <tr>
                   {[
                     'MONITOR',
@@ -544,10 +544,10 @@ export default function UptimePanel() {
               </thead>
               <tbody>
                 {monitors.map((m) => (
-                  <tr key={String(m.id)} className="border-b border-[#1d2922]">
+                  <tr key={String(m.id)} className="border-b border-[#1b2945]">
                     <td className="p-3">
                       <strong>{m.name}</strong>
-                      <p className="max-w-[340px] truncate text-xs text-[#91a097]">
+                      <p className="max-w-[340px] truncate text-xs text-[#9aa9c7]">
                         {m.url}
                       </p>
                       <div className="mt-1 flex gap-1">
@@ -555,7 +555,7 @@ export default function UptimePanel() {
                           (t: string) => (
                             <span
                               key={t}
-                              className="bg-[#17231c] px-2 py-0.5 text-xs text-[#80d9a0]"
+                              className="bg-[#172842] px-2 py-0.5 text-xs text-[#7dd3fc]"
                             >
                               {t}
                             </span>
@@ -572,7 +572,7 @@ export default function UptimePanel() {
                       {m.last_checked_at
                         ? ago(Number(m.last_checked_at), data.now)
                         : 'Never'}
-                      <p className="text-xs text-[#91a097]">
+                      <p className="text-xs text-[#9aa9c7]">
                         {m.last_latency_ms ?? '—'} ms
                       </p>
                     </td>
@@ -652,23 +652,23 @@ export default function UptimePanel() {
               </tbody>
             </table>
             {!monitors.length && (
-              <p className="p-8 text-center text-[#91a097]">
+              <p className="p-8 text-center text-[#9aa9c7]">
                 No monitors in this project.
               </p>
             )}
           </div>
         </div>
       </div>
-      <div className="grid gap-px border-b border-[#27372f] bg-[#27372f] lg:grid-cols-2">
-        <article className="bg-[#080d0a] p-5">
+      <div className="grid gap-px border-b border-[#293d63] bg-[#293d63] lg:grid-cols-2">
+        <article className="bg-[#0a1020] p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs tracking-widest text-[#54f28b]">
+              <p className="text-xs tracking-widest text-[#4da3ff]">
                 30-DAY AVAILABILITY
               </p>
               <h3 className="mt-2 text-xl font-bold">Service status</h3>
             </div>
-            <span className="text-sm text-[#91a097]">
+            <span className="text-sm text-[#9aa9c7]">
               {checks.length} checks
             </span>
           </div>
@@ -677,21 +677,21 @@ export default function UptimePanel() {
               <div
                 key={d.date}
                 title={`${d.date}: ${d.state}`}
-                className={`min-w-1 flex-1 ${d.state === 'up' ? 'bg-[#54f28b]' : d.state === 'down' ? 'bg-[#ff5757]' : 'bg-[#25332b]'}`}
+                className={`min-w-1 flex-1 ${d.state === 'up' ? 'bg-[#4da3ff]' : d.state === 'down' ? 'bg-[#ff5757]' : 'bg-[#253554]'}`}
                 style={{ height: d.state === 'none' ? '25%' : '100%' }}
               />
             ))}
           </div>
-          <div className="mt-3 flex gap-4 text-xs text-[#91a097]">
+          <div className="mt-3 flex gap-4 text-xs text-[#9aa9c7]">
             <span>■ Operational</span>
             <span className="text-[#ff8585]">■ Disrupted</span>
             <span>■ No data</span>
           </div>
         </article>
-        <article className="bg-[#080d0a] p-5">
+        <article className="bg-[#0a1020] p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs tracking-widest text-[#54f28b]">
+              <p className="text-xs tracking-widest text-[#4da3ff]">
                 PERFORMANCE
               </p>
               <h3 className="mt-2 text-xl font-bold">Response time</h3>
@@ -700,7 +700,7 @@ export default function UptimePanel() {
               {[1, 7, 30, 90].map((v) => (
                 <button
                   key={v}
-                  className={`border px-3 py-1 text-xs ${range === v ? 'border-[#54f28b] text-[#54f28b]' : 'border-[#30433a]'}`}
+                  className={`border px-3 py-1 text-xs ${range === v ? 'border-[#4da3ff] text-[#4da3ff]' : 'border-[#354d79]'}`}
                   onClick={() => setRange(v)}
                 >
                   {v === 1 ? '24H' : `${v}D`}
@@ -711,20 +711,20 @@ export default function UptimePanel() {
           <div className="mt-4 h-52">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chart}>
-                <CartesianGrid stroke="#1d2922" />
-                <XAxis dataKey="time" stroke="#718078" fontSize={11} />
-                <YAxis stroke="#718078" fontSize={11} />
+                <CartesianGrid stroke="#1b2945" />
+                <XAxis dataKey="time" stroke="#8293ba" fontSize={11} />
+                <YAxis stroke="#8293ba" fontSize={11} />
                 <Tooltip
                   contentStyle={{
-                    background: '#070b08',
-                    border: '1px solid #30433a',
+                    background: '#080d1a',
+                    border: '1px solid #354d79',
                     borderRadius: 0,
                   }}
                 />
                 <Line
                   type="monotone"
                   dataKey="latency"
-                  stroke="#54f28b"
+                  stroke="#4da3ff"
                   dot={false}
                 />
               </LineChart>
@@ -732,11 +732,11 @@ export default function UptimePanel() {
           </div>
         </article>
       </div>
-      <div className="grid gap-px bg-[#27372f] lg:grid-cols-[1.4fr_1fr]">
-        <article className="bg-[#080d0a] p-5">
+      <div className="grid gap-px bg-[#293d63] lg:grid-cols-[1.4fr_1fr]">
+        <article className="bg-[#0a1020] p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs tracking-widest text-[#54f28b]">
+              <p className="text-xs tracking-widest text-[#4da3ff]">
                 INCIDENT HISTORY
               </p>
               <h3 className="mt-2 text-xl font-bold">Outage timeline</h3>
@@ -750,7 +750,7 @@ export default function UptimePanel() {
               ].map(([v, l]) => (
                 <button
                   key={v}
-                  className={`border px-3 py-1 text-xs ${filter === v ? 'border-[#54f28b]' : 'border-[#30433a]'}`}
+                  className={`border px-3 py-1 text-xs ${filter === v ? 'border-[#4da3ff]' : 'border-[#354d79]'}`}
                   onClick={() => setFilter(v)}
                 >
                   {l}
@@ -760,16 +760,16 @@ export default function UptimePanel() {
           </div>
           <div className="mt-4 space-y-2">
             {incidents.map((i) => (
-              <div key={String(i.id)} className="border border-[#27372f] p-4">
+              <div key={String(i.id)} className="border border-[#293d63] p-4">
                 <div className="flex flex-wrap justify-between gap-2">
                   <div>
                     <Status value={String(i.status)} />
                     <h4 className="mt-2 font-bold">{i.title}</h4>
-                    <p className="mt-1 text-sm text-[#91a097]">
+                    <p className="mt-1 text-sm text-[#9aa9c7]">
                       {i.trigger_text}
                     </p>
                   </div>
-                  <div className="text-right text-xs text-[#91a097]">
+                  <div className="text-right text-xs text-[#9aa9c7]">
                     <p>{new Date(String(i.started_at)).toLocaleString()}</p>
                     <p>
                       {duration(
@@ -813,18 +813,18 @@ export default function UptimePanel() {
               </div>
             ))}
             {!incidents.length && (
-              <p className="py-8 text-center text-[#91a097]">
+              <p className="py-8 text-center text-[#9aa9c7]">
                 No incidents in this view.
               </p>
             )}
           </div>
         </article>
-        <article className="bg-[#080d0a] p-5">
-          <p className="text-xs tracking-widest text-[#54f28b]">
+        <article className="bg-[#0a1020] p-5">
+          <p className="text-xs tracking-widest text-[#4da3ff]">
             NOTIFICATIONS
           </p>
           <h3 className="mt-2 text-xl font-bold">Destinations</h3>
-          <p className="mt-2 text-sm text-[#91a097]">
+          <p className="mt-2 text-sm text-[#9aa9c7]">
             Opened, acknowledged, and resolved lifecycle events.
           </p>
           <div className="mt-4 space-y-2">
@@ -836,30 +836,30 @@ export default function UptimePanel() {
             ].map(([key, label]) => (
               <div
                 key={key}
-                className="flex items-center border border-[#27372f] p-3"
+                className="flex items-center border border-[#293d63] p-3"
               >
                 <Bell size={15} />
                 <span className="ml-3">{label}</span>
                 <span
-                  className={`ml-auto text-xs ${data.channels[key] ? 'text-[#54f28b]' : 'text-[#ffc247]'}`}
+                  className={`ml-auto text-xs ${data.channels[key] ? 'text-[#4da3ff]' : 'text-[#ffc247]'}`}
                 >
                   {data.channels[key] ? 'ACTIVE' : 'NEEDS SECRET'}
                 </span>
               </div>
             ))}
           </div>
-          <p className="mt-4 text-xs text-[#91a097]">
+          <p className="mt-4 text-xs text-[#9aa9c7]">
             Channel credentials stay in server environment variables. Webhooks
             are signed with HMAC-SHA256.
           </p>
-          <div className="mt-6 border-t border-[#27372f] pt-4">
-            <p className="text-xs tracking-widest text-[#54f28b]">
+          <div className="mt-6 border-t border-[#293d63] pt-4">
+            <p className="text-xs tracking-widest text-[#4da3ff]">
               CAPTURED EVIDENCE
             </p>
             {checks.slice(0, 5).map((c) => (
               <div
                 key={String(c.id)}
-                className="mt-3 border-l-2 border-[#30433a] pl-3 text-xs"
+                className="mt-3 border-l-2 border-[#354d79] pl-3 text-xs"
               >
                 <p>
                   {new Date(Number(c.checked_at)).toLocaleString()} ·{' '}
@@ -867,7 +867,7 @@ export default function UptimePanel() {
                   {c.latency_ms}ms
                 </p>
                 <p
-                  className={Number(c.ok) ? 'text-[#54f28b]' : 'text-[#ff8585]'}
+                  className={Number(c.ok) ? 'text-[#4da3ff]' : 'text-[#ff8585]'}
                 >
                   {Number(c.ok) ? 'Healthy' : c.error}
                 </p>
@@ -889,10 +889,10 @@ function Metric({
   danger?: boolean;
 }) {
   return (
-    <div className="bg-[#080d0a] p-4">
-      <p className="text-xs text-[#91a097]">{label}</p>
+    <div className="bg-[#0a1020] p-4">
+      <p className="text-xs text-[#9aa9c7]">{label}</p>
       <p
-        className={`mt-1 text-2xl font-bold ${danger ? 'text-[#ff8585]' : 'text-[#edf4ef]'}`}
+        className={`mt-1 text-2xl font-bold ${danger ? 'text-[#ff8585]' : 'text-[#edf3ff]'}`}
       >
         {value}
       </p>
@@ -904,7 +904,7 @@ function Status({ value }: { value: string }) {
     bad = ['down', 'investigating'].includes(value);
   return (
     <span
-      className={`inline-flex items-center gap-1 border px-2 py-1 text-xs font-bold uppercase ${good ? 'border-[#397a51] text-[#54f28b]' : bad ? 'border-[#943c3c] text-[#ff8585]' : 'border-[#735d2c] text-[#ffc247]'}`}
+      className={`inline-flex items-center gap-1 border px-2 py-1 text-xs font-bold uppercase ${good ? 'border-[#2e6fc4] text-[#4da3ff]' : bad ? 'border-[#943c3c] text-[#ff8585]' : 'border-[#735d2c] text-[#ffc247]'}`}
     >
       {good ? (
         <CheckCircle2 size={12} />
