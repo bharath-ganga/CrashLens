@@ -1,6 +1,7 @@
 import type { CrashLensEnv } from './runtime';
 import { nextMonitorState, probeEndpoint } from '../lib/uptime';
 import { flushEmails } from './email';
+import { notifyLifecycle } from './notifications';
 
 export type Monitor = {
   id: string;
@@ -14,6 +15,14 @@ export type Monitor = {
   status: string;
   consecutive_failures: number;
   outage_id: string | null;
+  method: string;
+  timeout_ms: number;
+  expected_min: number;
+  expected_max: number;
+  assertion_type: string;
+  assertion_value: string | null;
+  request_headers_json: string;
+  request_body: string | null;
 };
 
 export async function checkMonitor(env: CrashLensEnv, monitor: Monitor) {
@@ -24,7 +33,16 @@ export async function checkMonitor(env: CrashLensEnv, monitor: Monitor) {
     .bind(now + 60000, monitor.id, now, now)
     .run();
   if (!claim.meta.changes) return { skipped: true };
-  const result = await probeEndpoint(monitor.url);
+  const result = await probeEndpoint(monitor.url, fetch, {
+    method: monitor.method,
+    timeoutMs: monitor.timeout_ms,
+    expectedMin: monitor.expected_min,
+    expectedMax: monitor.expected_max,
+    assertionType: monitor.assertion_type,
+    assertionValue: monitor.assertion_value,
+    headers: JSON.parse(monitor.request_headers_json),
+    body: monitor.request_body,
+  });
   const next = nextMonitorState(
     monitor.status,
     monitor.consecutive_failures,
@@ -34,7 +52,7 @@ export async function checkMonitor(env: CrashLensEnv, monitor: Monitor) {
   const outageId = next.opened ? crypto.randomUUID() : monitor.outage_id;
   const statements = [
     env.DB.prepare(
-      'INSERT INTO uptime_checks (id,monitor_id,checked_at,ok,latency_ms,http_status,error) VALUES (?,?,?,?,?,?,?)',
+      'INSERT INTO uptime_checks (id,monitor_id,checked_at,ok,latency_ms,http_status,error,region,evidence_json) VALUES (?,?,?,?,?,?,?,?,?)',
     ).bind(
       crypto.randomUUID(),
       monitor.id,
@@ -43,6 +61,8 @@ export async function checkMonitor(env: CrashLensEnv, monitor: Monitor) {
       result.latencyMs,
       result.httpStatus,
       result.error,
+      'origin',
+      JSON.stringify(result.evidence),
     ),
     env.DB.prepare(`UPDATE uptime_monitors SET status=?,consecutive_failures=?,last_checked_at=?,next_check_at=?,lease_until=0,
       last_latency_ms=?,last_http_status=?,last_error=?,outage_id=? WHERE id=?`).bind(
@@ -79,34 +99,19 @@ export async function checkMonitor(env: CrashLensEnv, monitor: Monitor) {
         "UPDATE incidents SET status='resolved',last_seen_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND team_id=?",
       ).bind(new Date(now).toISOString(), outageId, monitor.team_id),
     );
-  const eventKey = next.opened
-    ? `outage:${outageId}`
-    : next.recovered
-      ? `recovery:${outageId}`
-      : null;
-  // Insert notification rows in the same transaction as the state transition.
-  if (eventKey) {
-    const members = await env.DB.prepare(
-      'SELECT u.email FROM users u JOIN team_members tm ON tm.user_id=u.id WHERE tm.team_id=?',
-    )
-      .bind(monitor.team_id)
-      .all<{ email: string }>();
-    for (const member of members.results)
-      if (!/\.(test|local)$/.test(member.email))
-        statements.push(
-          env.DB.prepare(
-            `INSERT OR IGNORE INTO email_outbox (id,event_key,team_id,recipient,subject,body) VALUES (?,?,?,?,?,?)`,
-          ).bind(
-            crypto.randomUUID(),
-            eventKey,
-            monitor.team_id,
-            member.email,
-            `${next.opened ? 'DOWN' : 'RECOVERED'}: ${monitor.name}`,
-            `${monitor.name} (${monitor.service}) ${next.opened ? 'failed repeated checks' : 'is responding again'}.\nEndpoint: ${monitor.url}\nTime: ${new Date(now).toISOString()}\n${result.error ?? `HTTP ${result.httpStatus}, ${result.latencyMs} ms`}\nOpen CrashLens History to investigate.`,
-          ),
-        );
-  }
   await env.DB.batch(statements);
+  if ((next.opened || next.recovered) && outageId)
+    await notifyLifecycle(env, {
+      event: next.opened ? 'opened' : 'resolved',
+      id: outageId,
+      teamId: monitor.team_id,
+      monitor: monitor.name,
+      service: monitor.service,
+      url: monitor.url,
+      detail:
+        result.error ?? `HTTP ${result.httpStatus}, ${result.latencyMs} ms`,
+      occurredAt: new Date(now).toISOString(),
+    });
   return result;
 }
 
