@@ -1,5 +1,22 @@
 # CrashLens
 
+CrashLens is a production incident investigation and uptime-monitoring platform. It ingests TXT, CSV, JSON, and JSONL logs, redacts sensitive values, groups related errors into incidents, correlates them with deployments and uptime failures, and builds an investigation timeline. The interface uses a solid, square-edged operations-console design.
+
+## What is included
+
+- Log upload, parsing, duplicate detection, redaction, incident grouping, severity scoring, timelines, and history.
+- Separate CrashLens email/password accounts, team workspaces, sessions, password reset, and optional ChatGPT access.
+- Project-based HTTP monitors with GET, HEAD, POST, PUT, PATCH, and DELETE checks.
+- Configurable intervals, timeouts, expected status ranges, body assertions (`contains`, `exact`, and `regex`), safe request headers, request bodies, and tags.
+- 30-day uptime bars, 24-hour to 90-day response-time charts, captured check evidence, and manual checks.
+- Automatic outage incidents after three failures, recovery detection, acknowledge/resolve actions, and incident filters.
+- Email, Slack, PagerDuty, and HMAC-SHA256 signed webhook lifecycle notifications.
+- SSRF defenses: HTTPS-only destinations, blocked credentials/query strings/private addresses, DNS checks, no redirects, header restrictions, response-size limits, and database leases.
+
+## Architecture
+
+The web application is built with vinext/React and runs on Cloudflare Workers through Sites. D1 stores accounts, teams, uploaded logs, incidents, monitors, checks, projects, sessions, and the email outbox. Resend delivers account and incident emails. An external runner calls the authenticated monitor tick endpoint once per minute.
+
 ## Local development
 
 Run `npm install` and `npm run dev`. After the first start, run `node scripts/migrate-local.mjs` to apply all schema migrations to the local emulator. Production Sites publishing applies the SQL files in `drizzle/`.
@@ -22,9 +39,20 @@ The outbox stores email bodies until accepted by Resend, then clears them (inclu
 
 ## Uptime monitoring
 
-Open Monitoring. Add a public HTTPS health endpoint, service name, and interval. The probe uses HEAD, considers only 2xx healthy, and does not follow redirects. Credentials, query strings, private IP literals, and private DNS answers are rejected. Use a public-egress Workers environment; DNS preflight alone is not DNS pinning or a general private-network SSRF boundary.
+Open Monitoring, choose or create a project, and add a public HTTPS endpoint. Configure its service name, method, interval, timeout, expected HTTP status range, optional response-body assertion, headers, body, and tags. Credentials, query strings, private IP literals, private DNS answers, redirects, and sensitive headers are rejected. Use a public-egress Workers environment; DNS preflight alone is not DNS pinning or a general private-network SSRF boundary.
 
 Three consecutive failed checks open an outage incident and queue one notification to each workspace member. The next success resolves the outage and queues a recovery message. Repeated failures during the same outage do not flood inboxes. Each uploaded incident also queues an email. Matching service names let you compare the outage with log incidents in History; this is correlation, not proof of a root cause. Uptime is the fraction of successful observed checks over 30 days, not a time-weighted SLA.
+
+### Optional alert destinations
+
+Configure any of these server-only values in `.dev.vars` locally and in the hosting environment for production:
+
+- `SLACK_WEBHOOK_URL` — Slack incoming-webhook URL.
+- `PAGERDUTY_ROUTING_KEY` — PagerDuty Events API v2 integration key.
+- `ALERT_WEBHOOK_URL` — HTTPS endpoint that receives CrashLens lifecycle JSON.
+- `ALERT_WEBHOOK_SECRET` — secret used to sign the webhook body in `X-CrashLens-Signature` as `sha256=<hex>`.
+
+Lifecycle events are `opened`, `acknowledged`, and `resolved`. Keep every credential out of Git.
 
 ### Always-on scheduler (required)
 
@@ -34,9 +62,17 @@ The current Sites deployment is owner-private: the platform access gate is separ
 
 Sites' existing access gate also remains in front of the new account page. Separate accounts do not automatically make the site public.
 
+### Regional monitoring status
+
+The repository records the check region and exposes the evidence in the dashboard. The bundled runner performs checks from its own `origin` region. True US/EU/APAC consensus requires deploying runners in those regions and securely coordinating their results; the UI does not claim those agents exist until they are actually deployed.
+
+## Database migrations
+
+Schema changes live in `drizzle/`. Migration `0004_uptime_control.sql` adds monitor projects, advanced HTTP configuration, regions, and evidence. Run `node scripts/migrate-local.mjs` after pulling changes. Sites applies committed migrations when publishing.
+
 ## Verification
 
-- `npm test` — parser, redaction, hashing, URL safety, and outage transition tests.
+- `npm test` — parser, redaction, hashing, URL safety, probe configuration, and outage transition tests.
 - `npm run lint` and `npx tsc --noEmit`.
 - `npm run build`.
 - With dev running and migrations applied: `node --experimental-strip-types scripts/test-local.mjs`. This creates disposable local account fixtures, tests verification/reset/session revocation and monitor records, then removes only its fixtures. No real emails are sent. Registration and inbox delivery still require a configured sender and end-to-end provider testing.

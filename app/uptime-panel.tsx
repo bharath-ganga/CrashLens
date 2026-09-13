@@ -1,255 +1,921 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
+import {
+  AlertTriangle,
+  Bell,
+  CheckCircle2,
+  Clock3,
+  FolderKanban,
+  Pause,
+  Play,
+  Plus,
+  RefreshCw,
+  Settings2,
+  Trash2,
+} from 'lucide-react';
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 type Row = Record<string, string | number | null>;
 type Data = {
+  now: number;
+  projects: Row[];
   monitors: Row[];
   checks: Row[];
+  incidents: Row[];
   emails: Row[];
-  emailConfigured: boolean;
   schedulerActive: boolean;
+  lastSchedulerRun: number | null;
+  channels: Record<string, boolean>;
+  regions: string[];
+  error?: string;
 };
-const input = 'mt-2 w-full border border-[#46564c] bg-[#030504] p-3 text-base';
+const field =
+  'w-full border border-[#30433a] bg-[#050807] px-3 py-2.5 text-sm text-[#eef5f0] outline-none focus:border-[#54f28b]';
 const button =
-  'border border-[#46564c] px-4 py-2 text-sm hover:border-[#d6ff00] disabled:opacity-50';
+  'inline-flex items-center justify-center gap-2 border border-[#3a5145] bg-[#101813] px-3 py-2 text-sm font-semibold hover:bg-[#18241d] disabled:cursor-not-allowed disabled:opacity-40';
+const empty: Data = {
+  now: 0,
+  projects: [],
+  monitors: [],
+  checks: [],
+  incidents: [],
+  emails: [],
+  schedulerActive: false,
+  lastSchedulerRun: null,
+  channels: {},
+  regions: [],
+};
+function ago(value: number | null, now: number) {
+  if (!value) return 'never';
+  const sec = Math.max(0, Math.floor((now - value) / 1000));
+  if (sec < 60) return `${sec}s ago`;
+  if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
+  return `${Math.floor(sec / 3600)}h ago`;
+}
+function duration(start: string, end: string | null | undefined, now: number) {
+  const ms = Math.max(
+    0,
+    (end ? new Date(end).getTime() : now) - new Date(start).getTime(),
+  );
+  const min = Math.floor(ms / 60000);
+  return min < 60 ? `${min}m` : `${Math.floor(min / 60)}h ${min % 60}m`;
+}
+function Form({
+  projects,
+  monitor,
+  onDone,
+}: {
+  projects: Row[];
+  monitor?: Row;
+  onDone: () => void;
+}) {
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState('');
+  async function submit(e: React.SyntheticEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    const f = new FormData(e.currentTarget);
+    const payload = Object.fromEntries(f);
+    const r = await fetch('/api/monitors', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...payload,
+        action: monitor ? 'update' : 'create',
+        id: monitor?.id,
+      }),
+    });
+    const d = (await r.json()) as { error?: string };
+    setBusy(false);
+    if (!r.ok) {
+      setError(d.error || 'Could not save monitor');
+      return;
+    }
+    onDone();
+  }
+  const val = (key: string, fallback = '') =>
+    String(monitor?.[key] ?? fallback);
+  return (
+    <form
+      onSubmit={submit}
+      className="border-t border-[#27372f] bg-[#0a100c] p-5"
+    >
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <label className="text-sm">
+          Monitor name
+          <input
+            className={field}
+            name="name"
+            defaultValue={val('name')}
+            required
+          />
+        </label>
+        <label className="text-sm">
+          Service ID
+          <input
+            className={field}
+            name="service"
+            defaultValue={val('service')}
+            placeholder="payment-service"
+            required
+          />
+        </label>
+        <label className="text-sm md:col-span-2">
+          Public HTTPS endpoint
+          <input
+            className={field}
+            name="url"
+            type="url"
+            defaultValue={val('url', 'https://')}
+            required
+          />
+        </label>
+        <label className="text-sm">
+          Project
+          <select
+            className={field}
+            name="projectId"
+            defaultValue={val('project_id', String(projects[0]?.id ?? ''))}
+          >
+            {projects.map((p) => (
+              <option key={String(p.id)} value={String(p.id)}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm">
+          Method
+          <select
+            className={field}
+            name="method"
+            defaultValue={val('method', 'HEAD')}
+          >
+            {['HEAD', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map((v) => (
+              <option key={v}>{v}</option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm">
+          Interval
+          <select
+            className={field}
+            name="interval"
+            defaultValue={val('interval_seconds', '300')}
+          >
+            {[
+              [60, '1 minute'],
+              [300, '5 minutes'],
+              [600, '10 minutes'],
+              [900, '15 minutes'],
+              [1800, '30 minutes'],
+              [3600, '1 hour'],
+            ].map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm">
+          Timeout (ms)
+          <input
+            className={field}
+            name="timeout"
+            type="number"
+            min="1000"
+            max="30000"
+            defaultValue={val('timeout_ms', '10000')}
+          />
+        </label>
+        <label className="text-sm">
+          Minimum status
+          <input
+            className={field}
+            name="expectedMin"
+            type="number"
+            min="100"
+            max="599"
+            defaultValue={val('expected_min', '200')}
+          />
+        </label>
+        <label className="text-sm">
+          Maximum status
+          <input
+            className={field}
+            name="expectedMax"
+            type="number"
+            min="100"
+            max="599"
+            defaultValue={val('expected_max', '299')}
+          />
+        </label>
+        <label className="text-sm">
+          Body assertion
+          <select
+            className={field}
+            name="assertionType"
+            defaultValue={val('assertion_type', 'none')}
+          >
+            {['none', 'contains', 'exact', 'regex'].map((v) => (
+              <option key={v}>{v}</option>
+            ))}
+          </select>
+        </label>
+        <label className="text-sm">
+          Assertion value
+          <input
+            className={field}
+            name="assertionValue"
+            defaultValue={val('assertion_value')}
+          />
+        </label>
+        <label className="text-sm md:col-span-2">
+          Request headers JSON
+          <textarea
+            className={field}
+            rows={2}
+            name="headers"
+            defaultValue={val('request_headers_json', '{}')}
+          />
+        </label>
+        <label className="text-sm md:col-span-2">
+          Request body
+          <textarea
+            className={field}
+            rows={2}
+            name="requestBody"
+            defaultValue={val('request_body')}
+          />
+        </label>
+        <label className="text-sm md:col-span-2">
+          Tags, comma separated
+          <input
+            className={field}
+            name="tags"
+            defaultValue={
+              monitor?.tags_json
+                ? JSON.parse(String(monitor.tags_json)).join(', ')
+                : ''
+            }
+            placeholder="api, production, checkout"
+          />
+        </label>
+      </div>
+      {error && (
+        <p className="mt-4 border border-[#ff5757] p-3 text-sm text-[#ff8585]">
+          {error}
+        </p>
+      )}
+      <div className="mt-4 flex gap-3">
+        <button
+          disabled={busy}
+          className="bg-[#54f28b] px-5 py-2.5 font-bold text-[#031008]"
+        >
+          {busy ? 'Saving…' : monitor ? 'Save monitor' : 'Create monitor'}
+        </button>
+        <button type="button" className={button} onClick={onDone}>
+          Cancel
+        </button>
+      </div>
+      <p className="mt-3 text-xs text-[#809087]">
+        Secret headers such as Authorization and Cookie are blocked. Redirects
+        and private-network destinations are never followed.
+      </p>
+    </form>
+  );
+}
 export default function UptimePanel() {
-  const [data, setData] = useState<Data | null>(null);
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState('');
+  const [data, setData] = useState<Data>(empty),
+    [loading, setLoading] = useState(true),
+    [error, setError] = useState(''),
+    [project, setProject] = useState('all'),
+    [showForm, setShowForm] = useState(false),
+    [editing, setEditing] = useState<Row | null>(null),
+    [range, setRange] = useState(7),
+    [filter, setFilter] = useState('all'),
+    [deleteId, setDeleteId] = useState('');
   const load = useCallback(async () => {
     try {
-      const r = await fetch('/api/monitors', { cache: 'no-store' });
-      const d = await r.json() as Data & {error?:string};
-      if (!r.ok) throw new Error(d.error);
+      const r = await fetch('/api/monitors', { cache: 'no-store' }),
+        d = (await r.json()) as Data;
+      if (!r.ok) throw Error(d.error || 'Monitoring unavailable');
       setData(d);
+      setError('');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unable to load monitors');
+      setError(e instanceof Error ? e.message : 'Monitoring unavailable');
+    } finally {
+      setLoading(false);
     }
   }, []);
   useEffect(() => {
-    const initial = setTimeout(() => void load(),0);
-    const timer = setInterval(() => void load(), 15000);
-    return () => { clearTimeout(initial); clearInterval(timer); };
+    queueMicrotask(() => void load());
+    const id = setInterval(() => void load(), 15000);
+    return () => clearInterval(id);
   }, [load]);
-  async function act(body: Record<string, unknown>) {
-    setBusy(true);
+  async function act(payload: Record<string, unknown>) {
     setError('');
-    setNotice('');
-    try {
-      const r = await fetch('/api/monitors', {
+    const r = await fetch('/api/monitors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const d = await r.json() as {error?:string;skipped?:boolean};
-      if (!r.ok) throw new Error(d.error);
-      await load();
-      setNotice(
-        d.skipped
-          ? 'Check is paused, running, or not yet due.'
-          : 'Monitor updated.',
-      );
-      return true;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Request failed');
-      return false;
-    } finally {
-      setBusy(false);
+        body: JSON.stringify(payload),
+      }),
+      d = (await r.json()) as { error?: string };
+    if (!r.ok) {
+      setError(d.error || 'Action failed');
+      return;
     }
+    setDeleteId('');
+    await load();
   }
+  const monitors = data.monitors.filter(
+      (m) => project === 'all' || m.project_id === project,
+    ),
+    checks = data.checks.filter((c) =>
+      monitors.some((m) => m.id === c.monitor_id),
+    );
+  const cutoff = data.now - range * 86400000;
+  const chart = [...checks]
+    .filter((c) => Number(c.checked_at) > cutoff)
+    .reverse()
+    .map((c) => ({
+      time: new Date(Number(c.checked_at)).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+      }),
+      latency: Number(c.latency_ms),
+      ok: Number(c.ok),
+    }));
+  const days = Array.from({ length: 30 }, (_, i) => {
+    const date = new Date(data.now);
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - (29 - i));
+    const next = date.getTime() + 86400000,
+      rows = checks.filter(
+        (c) =>
+          Number(c.checked_at) >= date.getTime() && Number(c.checked_at) < next,
+      );
+    return {
+      date: date.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+      }),
+      state: !rows.length
+        ? 'none'
+        : rows.some((c) => !Number(c.ok))
+          ? 'down'
+          : 'up',
+    };
+  });
+  const incidents = data.incidents.filter(
+    (i) =>
+      filter === 'all' ||
+      (filter === 'live'
+        ? i.status === 'investigating'
+        : filter === 'ack'
+          ? i.status === 'monitoring'
+          : i.status === 'resolved'),
+  );
+  if (loading)
+    return (
+      <section className="border border-[#27372f] bg-[#080d0a] p-8">
+        Loading monitor control…
+      </section>
+    );
   return (
-    <section className="space-y-5 text-base">
-      <h2 className="text-2xl font-bold">Website & API uptime</h2>
-      {error && (
-        <p role="alert" className="border border-[#ff4d4d] p-4 text-[#ff8585]">
-          {error}{' '}
-          <Link className="underline" href="/account">
-            Sign in
-          </Link>
-        </p>
-      )}
-      {notice && <output className="block">{notice}</output>}
-      {data && (
-        <>
-          <div className="grid gap-3 md:grid-cols-2">
-            <p className="border border-[#344139] p-4">
-              Scheduler: {data.schedulerActive ? 'Running' : 'Not connected'}
+    <section className="overflow-hidden border border-[#27372f] bg-[#070b08] text-[#edf4ef]">
+      <header className="border-b border-[#27372f] bg-[#0d1510] p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="font-mono text-xs tracking-[.2em] text-[#54f28b]">
+              UPTIME CONTROL
             </p>
-            <p className="border border-[#344139] p-4">
-              Email sender:{' '}
-              {data.emailConfigured ? 'Configured' : 'Setup required'}
+            <h2 className="mt-2 text-2xl font-bold">Endpoint monitoring</h2>
+            <p className="mt-1 text-sm text-[#91a097]">
+              Checks, evidence, outages, performance, and notifications in one
+              operations view.
             </p>
           </div>
-          {!data.schedulerActive && (
-            <p className="border-l-4 border-[#e5a50a] p-4 text-sm">
-              Background checks need the monitoring runner on an always-on
-              server. This page only refreshes results. Check now runs a due
-              check.
-            </p>
-          )}
-          {!data.emailConfigured && (
-            <p className="border-l-4 border-[#e5a50a] p-4 text-sm">
-              Emails are queued until a verified sender is connected.
-            </p>
-          )}
+          <div className="flex gap-2">
+            <button
+              className={button}
+              onClick={() => {
+                setEditing(null);
+                setShowForm(!showForm);
+              }}
+            >
+              <Plus size={15} />
+              New monitor
+            </button>
+            <button className={button} onClick={() => void load()}>
+              <RefreshCw size={15} />
+              Refresh
+            </button>
+          </div>
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-px border border-[#27372f] bg-[#27372f] md:grid-cols-4">
+          <Metric label="MONITORS" value={String(monitors.length)} />
+          <Metric
+            label="ACTIVE"
+            value={String(monitors.filter((m) => Number(m.enabled)).length)}
+          />
+          <Metric
+            label="LIVE INCIDENTS"
+            value={String(
+              data.incidents.filter((i) => i.status === 'investigating').length,
+            )}
+            danger
+          />
+          <Metric
+            label="SCHEDULER"
+            value={data.schedulerActive ? 'ONLINE' : 'OFFLINE'}
+            danger={!data.schedulerActive}
+          />
+        </div>
+      </header>
+      {error && (
+        <p className="m-5 border border-[#ff5757] bg-[#230d0d] p-3 text-sm text-[#ff8585]">
+          {error}
+        </p>
+      )}
+      <div className="grid border-b border-[#27372f] xl:grid-cols-[240px_1fr]">
+        <aside className="border-b border-[#27372f] bg-[#080d0a] p-4 xl:border-b-0 xl:border-r">
+          <p className="text-xs font-bold tracking-widest text-[#91a097]">
+            PROJECTS
+          </p>
+          <button
+            className={`mt-3 w-full border p-3 text-left text-sm ${project === 'all' ? 'border-[#54f28b] bg-[#102219]' : 'border-[#27372f]'}`}
+            onClick={() => setProject('all')}
+          >
+            All projects{' '}
+            <span className="float-right">{data.monitors.length}</span>
+          </button>
+          {data.projects.map((p) => (
+            <button
+              key={String(p.id)}
+              className={`mt-2 w-full border p-3 text-left text-sm ${project === p.id ? 'border-[#54f28b] bg-[#102219]' : 'border-[#27372f]'}`}
+              onClick={() => setProject(String(p.id))}
+            >
+              <FolderKanban className="mr-2 inline" size={14} />
+              {p.name}
+              <span className="float-right">
+                {data.monitors.filter((m) => m.project_id === p.id).length}
+              </span>
+            </button>
+          ))}
           <form
-            className="border border-[#344139] bg-[#090d0a] p-5"
+            className="mt-4 flex"
             onSubmit={async (e) => {
               e.preventDefault();
-              const form = e.currentTarget;
-              const v = new FormData(form);
-              if (
-                await act({
-                  action: 'create',
-                  name: v.get('name'),
-                  url: v.get('url'),
-                  service: v.get('service'),
-                  interval: Number(v.get('interval')),
-                })
-              )
-                form.reset();
+              const f = new FormData(e.currentTarget);
+              await act({ action: 'create_project', name: f.get('name') });
+              e.currentTarget.reset();
             }}
           >
-            <h3 className="text-lg font-bold">Add a monitor</h3>
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <label>
-                Name
-                <input
-                  required
-                  name="name"
-                  maxLength={100}
-                  placeholder="Checkout health"
-                  className={input}
-                />
-              </label>
-              <label>
-                HTTPS endpoint
-                <input
-                  required
-                  name="url"
-                  type="url"
-                  placeholder="https://api.yourdomain.com/health"
-                  className={input}
-                />
-              </label>
-              <label>
-                Service identifier
-                <input
-                  required
-                  name="service"
-                  maxLength={100}
-                  placeholder="payment-service"
-                  className={input}
-                />
-              </label>
-              <label>
-                Check interval
-                <select name="interval" defaultValue="300" className={input}>
-                  <option value="60">1 minute</option>
-                  <option value="300">5 minutes</option>
-                  <option value="900">15 minutes</option>
-                </select>
-              </label>
-            </div>
-            <p className="mt-4 text-sm text-[#91a097]">
-              HEAD checks expect HTTP 2xx. Three consecutive failures open an
-              incident and queue email; recovery sends another email. Use your
-              log service name.
-            </p>
+            <input
+              name="name"
+              className={field}
+              placeholder="New project"
+              required
+            />
             <button
-              disabled={busy}
-              className="mt-4 bg-[#d6ff00] px-5 py-3 font-bold text-black disabled:opacity-50"
+              className="border border-l-0 border-[#30433a] px-3"
+              aria-label="Add project"
             >
-              Create monitor
+              <Plus size={16} />
             </button>
           </form>
-          {!data.monitors.length && <p className="p-6">No monitors yet.</p>}
-          {data.monitors.map((m) => (
-            <article
-              key={String(m.id)}
-              className="border border-[#344139] bg-[#090d0a] p-5"
+          <div className="mt-6 border-t border-[#27372f] pt-4 text-xs text-[#91a097]">
+            <p
+              className={
+                data.schedulerActive ? 'text-[#54f28b]' : 'text-[#ffc247]'
+              }
             >
-              <h3 className="text-xl font-bold">
-                {m.name} —{' '}
-                {m.enabled ? String(m.status).toUpperCase() : 'PAUSED'}
-              </h3>
-              <p className="mt-2 break-all text-sm text-[#91a097]">
-                {m.url} · {m.service}
-              </p>
-              <p className="mt-3 text-sm">
-                30-day successful checks: {m.uptime_percent ?? '—'}% · Response:{' '}
-                {m.last_latency_ms ?? '—'} ms
-              </p>
-              <div className="mt-4 flex gap-3">
-                <button
-                  className={button}
-                  disabled={busy || !m.enabled}
-                  onClick={() => void act({ action: 'check', id: m.id })}
-                >
-                  Check now
-                </button>
-                <button
-                  className={button}
-                  disabled={busy}
-                  onClick={() =>
-                    void act({
-                      action: m.enabled ? 'pause' : 'resume',
-                      id: m.id,
-                    })
-                  }
-                >
-                  {m.enabled ? 'Pause' : 'Resume'}
-                </button>
-              </div>
-              {m.outage_id && (
-                <p className="mt-3 text-[#ff8585]">
-                  Open outage — investigate in History.
-                </p>
-              )}
-              <ol className="mt-4 space-y-2">
-                {data.checks
-                  .filter((c) => c.monitor_id === m.id)
-                  .slice(0, 5)
-                  .map((c) => (
-                    <li
-                      key={String(c.id)}
-                      className="border-t border-[#26312b] pt-2 text-sm"
-                    >
-                      {new Date(Number(c.checked_at)).toLocaleString()} ·{' '}
-                      {c.ok ? 'UP' : 'FAILED'} ·{' '}
-                      {c.http_status ?? 'No response'} · {c.latency_ms} ms{' '}
-                      {c.error}
-                    </li>
-                  ))}
-              </ol>
-            </article>
-          ))}
-          <article className="border border-[#344139] p-5">
-            <h3 className="text-xl font-bold">Email activity</h3>
-            <p className="mt-2 text-sm text-[#91a097]">
-              Accepted means the provider accepted the email, not confirmed
-              inbox delivery. Delivery stops after five failed attempts.
+              {data.schedulerActive
+                ? 'MONITOR NETWORK ONLINE'
+                : 'SCHEDULER NOT CONNECTED'}
             </p>
-            {!data.emails.length && (
-              <p className="mt-4">No emails queued yet.</p>
+            <p className="mt-2">
+              Last heartbeat: {ago(data.lastSchedulerRun, data.now)}
+            </p>
+            <p className="mt-2">
+              Region: origin. Deploy regional agents for geographic consensus.
+            </p>
+          </div>
+        </aside>
+        <div>
+          {showForm && (
+            <Form
+              projects={data.projects}
+              monitor={editing ?? undefined}
+              onDone={() => {
+                setShowForm(false);
+                setEditing(null);
+                void load();
+              }}
+            />
+          )}
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] text-left text-sm">
+              <thead className="border-b border-[#27372f] bg-[#0a100c] text-xs text-[#91a097]">
+                <tr>
+                  {[
+                    'MONITOR',
+                    'METHOD',
+                    'INTERVAL',
+                    'EXPECTED',
+                    'LAST CHECK',
+                    'STATUS',
+                    'ACTIONS',
+                  ].map((h) => (
+                    <th key={h} className="p-3">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {monitors.map((m) => (
+                  <tr key={String(m.id)} className="border-b border-[#1d2922]">
+                    <td className="p-3">
+                      <strong>{m.name}</strong>
+                      <p className="max-w-[340px] truncate text-xs text-[#91a097]">
+                        {m.url}
+                      </p>
+                      <div className="mt-1 flex gap-1">
+                        {JSON.parse(String(m.tags_json || '[]')).map(
+                          (t: string) => (
+                            <span
+                              key={t}
+                              className="bg-[#17231c] px-2 py-0.5 text-xs text-[#80d9a0]"
+                            >
+                              {t}
+                            </span>
+                          ),
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-3 font-mono">{m.method}</td>
+                    <td className="p-3">{m.interval_seconds}s</td>
+                    <td className="p-3">
+                      {m.expected_min}–{m.expected_max}
+                    </td>
+                    <td className="p-3">
+                      {m.last_checked_at
+                        ? ago(Number(m.last_checked_at), data.now)
+                        : 'Never'}
+                      <p className="text-xs text-[#91a097]">
+                        {m.last_latency_ms ?? '—'} ms
+                      </p>
+                    </td>
+                    <td className="p-3">
+                      <Status
+                        value={Number(m.enabled) ? String(m.status) : 'paused'}
+                      />
+                    </td>
+                    <td className="p-3">
+                      <div className="flex gap-2">
+                        <button
+                          title="Check now"
+                          className={button}
+                          disabled={!Number(m.enabled)}
+                          onClick={() =>
+                            void act({ action: 'check', id: m.id })
+                          }
+                        >
+                          <RefreshCw size={14} />
+                        </button>
+                        <button
+                          title={Number(m.enabled) ? 'Pause' : 'Resume'}
+                          className={button}
+                          onClick={() =>
+                            void act({
+                              action: Number(m.enabled) ? 'pause' : 'resume',
+                              id: m.id,
+                            })
+                          }
+                        >
+                          {Number(m.enabled) ? (
+                            <Pause size={14} />
+                          ) : (
+                            <Play size={14} />
+                          )}
+                        </button>
+                        <button
+                          title="Edit"
+                          className={button}
+                          onClick={() => {
+                            setEditing(m);
+                            setShowForm(true);
+                          }}
+                        >
+                          <Settings2 size={14} />
+                        </button>
+                        <button
+                          title="Delete"
+                          className={`${button} text-[#ff8585]`}
+                          onClick={() => setDeleteId(String(m.id))}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                      {deleteId === m.id && (
+                        <div className="mt-2 border border-[#ff5757] p-2 text-xs">
+                          Delete monitor and its checks?{' '}
+                          <button
+                            className="ml-2 underline"
+                            onClick={() =>
+                              void act({ action: 'delete', id: m.id })
+                            }
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            className="ml-2 underline"
+                            onClick={() => setDeleteId('')}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!monitors.length && (
+              <p className="p-8 text-center text-[#91a097]">
+                No monitors in this project.
+              </p>
             )}
-            {data.emails.map((m) => (
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-px border-b border-[#27372f] bg-[#27372f] lg:grid-cols-2">
+        <article className="bg-[#080d0a] p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs tracking-widest text-[#54f28b]">
+                30-DAY AVAILABILITY
+              </p>
+              <h3 className="mt-2 text-xl font-bold">Service status</h3>
+            </div>
+            <span className="text-sm text-[#91a097]">
+              {checks.length} checks
+            </span>
+          </div>
+          <div className="mt-5 flex h-24 items-end gap-1">
+            {days.map((d) => (
               <div
-                key={String(m.id)}
-                className="mt-4 border-t border-[#26312b] pt-3 text-sm"
+                key={d.date}
+                title={`${d.date}: ${d.state}`}
+                className={`min-w-1 flex-1 ${d.state === 'up' ? 'bg-[#54f28b]' : d.state === 'down' ? 'bg-[#ff5757]' : 'bg-[#25332b]'}`}
+                style={{ height: d.state === 'none' ? '25%' : '100%' }}
+              />
+            ))}
+          </div>
+          <div className="mt-3 flex gap-4 text-xs text-[#91a097]">
+            <span>■ Operational</span>
+            <span className="text-[#ff8585]">■ Disrupted</span>
+            <span>■ No data</span>
+          </div>
+        </article>
+        <article className="bg-[#080d0a] p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs tracking-widest text-[#54f28b]">
+                PERFORMANCE
+              </p>
+              <h3 className="mt-2 text-xl font-bold">Response time</h3>
+            </div>
+            <div className="flex">
+              {[1, 7, 30, 90].map((v) => (
+                <button
+                  key={v}
+                  className={`border px-3 py-1 text-xs ${range === v ? 'border-[#54f28b] text-[#54f28b]' : 'border-[#30433a]'}`}
+                  onClick={() => setRange(v)}
+                >
+                  {v === 1 ? '24H' : `${v}D`}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="mt-4 h-52">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chart}>
+                <CartesianGrid stroke="#1d2922" />
+                <XAxis dataKey="time" stroke="#718078" fontSize={11} />
+                <YAxis stroke="#718078" fontSize={11} />
+                <Tooltip
+                  contentStyle={{
+                    background: '#070b08',
+                    border: '1px solid #30433a',
+                    borderRadius: 0,
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="latency"
+                  stroke="#54f28b"
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </article>
+      </div>
+      <div className="grid gap-px bg-[#27372f] lg:grid-cols-[1.4fr_1fr]">
+        <article className="bg-[#080d0a] p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs tracking-widest text-[#54f28b]">
+                INCIDENT HISTORY
+              </p>
+              <h3 className="mt-2 text-xl font-bold">Outage timeline</h3>
+            </div>
+            <div className="flex">
+              {[
+                ['all', 'ALL'],
+                ['live', 'LIVE'],
+                ['ack', 'ACKNOWLEDGED'],
+                ['resolved', 'RESOLVED'],
+              ].map(([v, l]) => (
+                <button
+                  key={v}
+                  className={`border px-3 py-1 text-xs ${filter === v ? 'border-[#54f28b]' : 'border-[#30433a]'}`}
+                  onClick={() => setFilter(v)}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="mt-4 space-y-2">
+            {incidents.map((i) => (
+              <div key={String(i.id)} className="border border-[#27372f] p-4">
+                <div className="flex flex-wrap justify-between gap-2">
+                  <div>
+                    <Status value={String(i.status)} />
+                    <h4 className="mt-2 font-bold">{i.title}</h4>
+                    <p className="mt-1 text-sm text-[#91a097]">
+                      {i.trigger_text}
+                    </p>
+                  </div>
+                  <div className="text-right text-xs text-[#91a097]">
+                    <p>{new Date(String(i.started_at)).toLocaleString()}</p>
+                    <p>
+                      {duration(
+                        String(i.started_at),
+                        i.status === 'resolved' ? String(i.updated_at) : null,
+                        data.now,
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  {i.status === 'investigating' && (
+                    <button
+                      className={button}
+                      onClick={() =>
+                        void act({
+                          action: 'incident',
+                          incidentId: i.id,
+                          status: 'monitoring',
+                        })
+                      }
+                    >
+                      Acknowledge
+                    </button>
+                  )}
+                  {i.status !== 'resolved' && (
+                    <button
+                      className={button}
+                      onClick={() =>
+                        void act({
+                          action: 'incident',
+                          incidentId: i.id,
+                          status: 'resolved',
+                        })
+                      }
+                    >
+                      Resolve
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+            {!incidents.length && (
+              <p className="py-8 text-center text-[#91a097]">
+                No incidents in this view.
+              </p>
+            )}
+          </div>
+        </article>
+        <article className="bg-[#080d0a] p-5">
+          <p className="text-xs tracking-widest text-[#54f28b]">
+            NOTIFICATIONS
+          </p>
+          <h3 className="mt-2 text-xl font-bold">Destinations</h3>
+          <p className="mt-2 text-sm text-[#91a097]">
+            Opened, acknowledged, and resolved lifecycle events.
+          </p>
+          <div className="mt-4 space-y-2">
+            {[
+              ['email', 'Email'],
+              ['slack', 'Slack'],
+              ['pagerduty', 'PagerDuty'],
+              ['webhook', 'Signed webhook'],
+            ].map(([key, label]) => (
+              <div
+                key={key}
+                className="flex items-center border border-[#27372f] p-3"
+              >
+                <Bell size={15} />
+                <span className="ml-3">{label}</span>
+                <span
+                  className={`ml-auto text-xs ${data.channels[key] ? 'text-[#54f28b]' : 'text-[#ffc247]'}`}
+                >
+                  {data.channels[key] ? 'ACTIVE' : 'NEEDS SECRET'}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-xs text-[#91a097]">
+            Channel credentials stay in server environment variables. Webhooks
+            are signed with HMAC-SHA256.
+          </p>
+          <div className="mt-6 border-t border-[#27372f] pt-4">
+            <p className="text-xs tracking-widest text-[#54f28b]">
+              CAPTURED EVIDENCE
+            </p>
+            {checks.slice(0, 5).map((c) => (
+              <div
+                key={String(c.id)}
+                className="mt-3 border-l-2 border-[#30433a] pl-3 text-xs"
               >
                 <p>
-                  {m.subject} — {m.status}
+                  {new Date(Number(c.checked_at)).toLocaleString()} ·{' '}
+                  {c.region || 'origin'} · {c.http_status ?? 'NO RESPONSE'} ·{' '}
+                  {c.latency_ms}ms
                 </p>
-                <p>
-                  {m.recipient} · {m.attempts} attempts {m.last_error}
+                <p
+                  className={Number(c.ok) ? 'text-[#54f28b]' : 'text-[#ff8585]'}
+                >
+                  {Number(c.ok) ? 'Healthy' : c.error}
                 </p>
               </div>
             ))}
-          </article>
-        </>
-      )}
+          </div>
+        </article>
+      </div>
     </section>
+  );
+}
+function Metric({
+  label,
+  value,
+  danger = false,
+}: {
+  label: string;
+  value: string;
+  danger?: boolean;
+}) {
+  return (
+    <div className="bg-[#080d0a] p-4">
+      <p className="text-xs text-[#91a097]">{label}</p>
+      <p
+        className={`mt-1 text-2xl font-bold ${danger ? 'text-[#ff8585]' : 'text-[#edf4ef]'}`}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+function Status({ value }: { value: string }) {
+  const good = ['up', 'resolved'].includes(value),
+    bad = ['down', 'investigating'].includes(value);
+  return (
+    <span
+      className={`inline-flex items-center gap-1 border px-2 py-1 text-xs font-bold uppercase ${good ? 'border-[#397a51] text-[#54f28b]' : bad ? 'border-[#943c3c] text-[#ff8585]' : 'border-[#735d2c] text-[#ffc247]'}`}
+    >
+      {good ? (
+        <CheckCircle2 size={12} />
+      ) : bad ? (
+        <AlertTriangle size={12} />
+      ) : value === 'paused' ? (
+        <Pause size={12} />
+      ) : (
+        <Clock3 size={12} />
+      )}{' '}
+      {value}
+    </span>
   );
 }
