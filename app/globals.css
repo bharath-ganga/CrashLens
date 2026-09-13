@@ -20,17 +20,17 @@
 
 :root {
   color-scheme: dark;
-  --background: #050816;
-  --foreground: #f4f7ff;
-  --card: #0c1224;
-  --card-foreground: #f4f7ff;
-  --primary: #4da3ff;
-  --primary-foreground: #07101f;
-  --muted: #121a30;
-  --muted-foreground: #9aa9c7;
-  --border: #2f426b;
-  --input: #3e5686;
-  --ring: #22d3ee;
+  --background: #090909;
+  --foreground: #fafafa;
+  --card: #121212;
+  --card-foreground: #fafafa;
+  --primary: #f5f5f5;
+  --primary-foreground: #0b0b0b;
+  --muted: #1a1a1a;
+  --muted-foreground: #adadad;
+  --border: #3f3f3f;
+  --input: #525252;
+  --ring: #d4d4d4;
 }
 * {
   box-sizing: border-box;
@@ -52,11 +52,11 @@ button {
   background-image: none;
 }
 ::selection {
-  background: #4da3ff;
-  color: #08101f;
+  background: #f5f5f5;
+  color: #101010;
 }
 *:focus-visible {
-  outline: 2px solid #22d3ee;
+  outline: 2px solid #d4d4d4;
   outline-offset: 2px;
 }
 ::-webkit-scrollbar {
@@ -64,9 +64,9 @@ button {
   height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #070b16;
+  background: #0b0b0b;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2f426b;
-  border: 2px solid #070b16;
+  background: #3f3f3f;
+  border: 2px solid #0b0b0b;
 }
