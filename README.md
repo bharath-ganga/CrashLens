@@ -70,6 +70,12 @@ The repository records the check region and exposes the evidence in the dashboar
 
 Schema changes live in `drizzle/`. Migration `0004_uptime_control.sql` adds monitor projects, advanced HTTP configuration, regions, and evidence. Run `node scripts/migrate-local.mjs` after pulling changes. Sites applies committed migrations when publishing.
 
+## Platform client administration
+
+Set the server-only `ADMIN_EMAILS` variable to a comma-separated list of trusted administrator email addresses. Signed-in administrators then see a **Clients** section containing registered account names, emails, verification state, active-session count, workspace, incident and upload totals, and the account creation date/time in both the browser's local time and UTC. The API checks the allowlist on every request; hiding the navigation item is not the security boundary.
+
+For local development, add `ADMIN_EMAILS=you@example.com` to `.dev.vars`. Configure the same value in the hosted Sites environment. Never expose this endpoint to every registered account.
+
 ## Verification
 
 - `npm test` — parser, redaction, hashing, URL safety, probe configuration, and outage transition tests.

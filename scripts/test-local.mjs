@@ -50,6 +50,10 @@ try {
     headers: { Cookie: session },
   }).then((r) => r.json());
   assert.equal(me.user.id, id);
+  const clientsDenied = await fetch(`${base}/api/admin/clients`, {
+    headers: { Cookie: session },
+  });
+  assert.equal(clientsDenied.status, 403);
   const initial = await fetch(`${base}/api/monitors`, {
     headers: { Cookie: session },
   }).then((r) => r.json());
@@ -141,7 +145,7 @@ try {
   });
   assert.equal(unauthorized.status, 401);
   console.log(
-    'PASS: verification and single-use tokens; password checks; sessions; isolated monitor CRUD; CSRF; reset revocation; login email queue; logout; scheduler auth.',
+    'PASS: verification and single-use tokens; password checks; sessions; admin isolation; isolated monitor CRUD; CSRF; reset revocation; login email queue; logout; scheduler auth.',
   );
 } finally {
   // Only fixtures created by this run are removed from the local emulator.
