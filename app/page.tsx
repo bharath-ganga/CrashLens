@@ -111,7 +111,7 @@ function downloadText(content: string, filename: string) {
 const severityStyles = {
   critical: 'border-[#ff4d4d] bg-[#2a1012] text-[#ff7777]',
   warning: 'border-[#e5a50a] bg-[#241b08] text-[#ffc247]',
-  info: 'border-[#2f8fff] bg-[#0a1b2d] text-[#61adff]',
+  info: 'border-[#e5e5e5] bg-[#151515] text-[#e5e5e5]',
 };
 
 export default function Home() {
@@ -369,41 +369,41 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#050816] text-[#edf2ff]">
-      <header className="sticky top-0 z-50 flex h-16 items-center border-b-2 border-[#4da3ff] bg-[#070b16] px-4 lg:px-6">
+    <main className="min-h-screen bg-[#090909] text-[#f2f2f2]">
+      <header className="sticky top-0 z-50 flex h-16 items-center border-b-2 border-[#f5f5f5] bg-[#0b0b0b] px-4 lg:px-6">
         <button
           aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
           onClick={() => setMobileNavOpen((open) => !open)}
-          className="mr-3 grid size-9 place-items-center border border-[#2f426b] bg-[#0e1628] text-[#4da3ff] lg:hidden"
+          className="mr-3 grid size-9 place-items-center border border-[#3f3f3f] bg-[#151515] text-[#f5f5f5] lg:hidden"
         >
           {mobileNavOpen ? <X size={19} /> : <Menu size={19} />}
         </button>
         <div className="flex items-center gap-2.5">
-          <span className="grid size-9 place-items-center bg-[#4da3ff] text-[#07101f]">
+          <span className="grid size-9 place-items-center bg-[#f5f5f5] text-[#0b0b0b]">
             <Activity size={19} strokeWidth={3} />
           </span>
           <span className="text-base font-black tracking-[-0.04em] text-white">
             CRASHLENS
           </span>
-          <span className="border border-[#566a94] bg-[#0e1628] px-2 py-1 font-mono text-[11px] font-bold text-[#4da3ff]">
+          <span className="border border-[#6b6b6b] bg-[#151515] px-2 py-1 text-sm font-bold text-[#f5f5f5]">
             PROD / 05
           </span>
         </div>
-        <div className="ml-8 hidden h-full items-center border-x border-[#2d3e63] px-5 font-mono text-xs text-[#b8c3df] md:flex">
-          <span className="mr-2 size-2 bg-[#4da3ff]" /> ANALYSIS ENGINE / ONLINE
+        <div className="ml-8 hidden h-full items-center border-x border-[#383838] px-5 text-xs text-[#cccccc] md:flex">
+          <span className="mr-2 size-2 bg-[#f5f5f5]" /> System operational
         </div>
-        <div className="ml-auto flex items-center gap-3 font-mono text-[10px] text-[#8293ba]">
-          <span className="hidden border border-[#354971] bg-[#0e1628] px-2 py-1 sm:inline">
+        <div className="ml-auto flex items-center gap-3 text-xs text-[#999999]">
+          <span className="hidden border border-[#464646] bg-[#151515] px-2 py-1 sm:inline">
             {workspaceBusy
               ? 'SYNCING'
               : workspace
                 ? 'D1 + R2 CONNECTED'
                 : 'LOCAL FALLBACK'}
           </span>
-          <span className="h-4 w-px bg-[#2d3e63]" />
+          <span className="h-4 w-px bg-[#383838]" />
           <Link
             href="/account"
-            className="border border-[#2f426b] px-3 py-2 text-sm text-[#22d3ee]"
+            className="border border-[#3f3f3f] px-3 py-2 text-sm text-[#d4d4d4]"
           >
             Account
           </Link>
@@ -414,14 +414,14 @@ export default function Home() {
         <button
           aria-label="Close navigation overlay"
           onClick={() => setMobileNavOpen(false)}
-          className="fixed inset-0 top-16 z-30 bg-[#050816] lg:hidden"
+          className="fixed inset-0 top-16 z-30 bg-[#090909] lg:hidden"
         />
       )}
       <div className="flex min-h-[calc(100vh-64px)]">
         <aside
-          className={`${mobileNavOpen ? 'fixed inset-y-16 left-0 z-40 flex' : 'hidden'} w-64 shrink-0 flex-col border-r-2 border-[#2d3e63] bg-[#080d1a] p-3 lg:static lg:flex`}
+          className={`${mobileNavOpen ? 'fixed inset-y-16 left-0 z-40 flex' : 'hidden'} w-64 shrink-0 flex-col border-r-2 border-[#383838] bg-[#0d0d0d] p-3 lg:static lg:flex`}
         >
-          <p className="px-3 pb-3 pt-4 font-mono text-xs font-bold tracking-[0.18em] text-[#8293ba]">
+          <p className="px-3 pb-3 pt-4 text-xs font-bold tracking-[0.18em] text-[#999999]">
             CONTROL PLANE
           </p>
           <nav className="space-y-1">
@@ -440,16 +440,14 @@ export default function Home() {
                   setView(key);
                   setMobileNavOpen(false);
                 }}
-                className={`flex h-11 w-full items-center gap-3 border px-3 text-sm font-semibold ${view === key ? 'border-[#4da3ff] bg-[#4da3ff] text-[#07101f]' : 'border-transparent text-[#94a4c9] hover:border-[#2f426b] hover:bg-[#111a2e] hover:text-white'}`}
+                className={`flex h-11 w-full items-center gap-3 border px-3 text-sm font-semibold ${view === key ? 'border-[#f5f5f5] bg-[#f5f5f5] text-[#0b0b0b]' : 'border-transparent text-[#aaaaaa] hover:border-[#3f3f3f] hover:bg-[#181818] hover:text-white'}`}
               >
-                <span className="font-mono text-[11px] opacity-60">
-                  0{index + 1}
-                </span>
+                <span className="text-sm opacity-60">0{index + 1}</span>
                 <Icon size={15} />
                 {label}
                 {key === 'incidents' && (
                   <span
-                    className={`ml-auto px-1.5 py-0.5 font-mono text-[10px] font-black ${view === key ? 'bg-[#07101f] text-[#4da3ff]' : 'bg-[#2a3a5e] text-white'}`}
+                    className={`ml-auto px-1.5 py-0.5 text-xs font-black ${view === key ? 'bg-[#0b0b0b] text-[#f5f5f5]' : 'bg-[#343434] text-white'}`}
                   >
                     {incidents.length}
                   </span>
@@ -461,54 +459,54 @@ export default function Home() {
                 setUploadOpen(true);
                 setMobileNavOpen(false);
               }}
-              className="mt-3 flex h-11 w-full items-center gap-3 border border-[#22d3ee] bg-[#07171b] px-3 text-sm font-bold text-[#22d3ee] hover:bg-[#22d3ee] hover:text-[#001014]"
+              className="mt-3 flex h-11 w-full items-center gap-3 border border-[#d4d4d4] bg-[#101010] px-3 text-sm font-bold text-[#d4d4d4] hover:bg-[#d4d4d4] hover:text-[#050505]"
             >
               <Database size={15} />
               Upload source
             </button>
           </nav>
-          <p className="px-3 pb-2 pt-8 font-mono text-xs font-bold tracking-[0.16em] text-[#8293ba]">
+          <p className="px-3 pb-2 pt-8 text-xs font-bold text-[#999999]">
             CURRENT SOURCE
           </p>
-          <div className="border border-[#2f426b] bg-[#0e1628] p-4">
-            <div className="mb-2 flex items-center gap-2 text-xs font-bold text-[#4da3ff]">
+          <div className="border border-[#3f3f3f] bg-[#151515] p-4">
+            <div className="mb-2 flex items-center gap-2 text-xs font-bold text-[#f5f5f5]">
               <CheckCircle2 size={14} />
               PARSED
             </div>
-            <p className="truncate text-sm text-[#e1e7f6]" title={filename}>
+            <p className="truncate text-sm text-[#ededed]" title={filename}>
               {filename}
             </p>
-            <p className="mt-2 font-mono text-[11px] text-[#8293ba]">
+            <p className="mt-2 text-sm text-[#999999]">
               {logs.length} ROWS / {fileSize}
             </p>
           </div>
-          <div className="mt-auto border-t border-[#2d3e63] pt-3">
-            <div className="flex items-center gap-2 px-2 text-xs text-[#94a4c9]">
-              <ShieldCheck size={14} className="text-[#22d3ee]" />
+          <div className="mt-auto border-t border-[#383838] pt-3">
+            <div className="flex items-center gap-2 px-2 text-xs text-[#aaaaaa]">
+              <ShieldCheck size={14} className="text-[#d4d4d4]" />
               PII REDACTION / ACTIVE
             </div>
           </div>
         </aside>
 
         <div className="min-w-0 flex-1">
-          <section className="border-b-2 border-[#2d3e63] bg-[#0a1020] px-4 py-6 lg:px-8">
+          <section className="border-b-2 border-[#383838] bg-[#101010] px-4 py-6 lg:px-8">
             <div className="mx-auto flex max-w-[1500px] flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
-                <div className="mb-2 flex items-center gap-2 font-mono text-[11px] font-bold tracking-[0.16em] text-[#8293ba]">
+                <div className="mb-2 flex items-center gap-2 text-sm font-bold text-[#999999]">
                   <span>OPS</span>
                   <ChevronRight size={12} />
                   <span>{view.toUpperCase()}</span>
                   <ChevronRight size={12} />
-                  <span className="text-[#4da3ff]">
+                  <span className="text-[#f5f5f5]">
                     {workspaceMessage.toUpperCase()}
                   </span>
                 </div>
                 <h1 className="text-2xl font-black tracking-[-0.045em] text-white lg:text-[32px]">
                   {view === 'incidents'
-                    ? 'Production error investigation'
+                    ? 'Incidents'
                     : `${view[0].toUpperCase()}${view.slice(1)} control plane`}
                 </h1>
-                <p className="mt-2 text-sm text-[#9aa9c7]">
+                <p className="mt-2 text-sm text-[#adadad]">
                   Authenticated incident operations with durable storage, audit
                   history, integrations, and alert readiness.
                 </p>
@@ -517,17 +515,17 @@ export default function Home() {
                 <a
                   href="/samples/crashlens-sample.jsonl"
                   download
-                  className="flex h-11 items-center gap-2 border border-[#566a94] bg-[#0e1628] px-4 text-xs font-bold text-[#d4dcef] hover:border-white hover:text-white"
+                  className="flex h-11 items-center gap-2 border border-[#6b6b6b] bg-[#151515] px-4 text-xs font-bold text-[#e3e3e3] hover:border-white hover:text-white"
                 >
                   <Download size={15} />
                   SAMPLE JSONL
                 </a>
                 <button
                   onClick={() => setUploadOpen(true)}
-                  className="flex h-11 items-center gap-2 border border-[#4da3ff] bg-[#4da3ff] px-5 text-xs font-black text-[#07101f] hover:bg-white"
+                  className="flex h-11 items-center gap-2 border border-[#f5f5f5] bg-[#f5f5f5] px-5 text-xs font-black text-[#0b0b0b] hover:bg-white"
                 >
                   <Upload size={15} />
-                  ANALYZE FILE
+                  Upload logs
                 </button>
               </div>
             </div>
@@ -549,36 +547,36 @@ export default function Home() {
 
             {view === 'incidents' ? (
               <>
-                <section className="mb-4 grid grid-cols-2 border-l-2 border-t-2 border-[#2f426b] xl:grid-cols-4">
+                <section className="mb-4 grid grid-cols-2 border-l-2 border-t-2 border-[#3f3f3f] xl:grid-cols-4">
                   {metrics.map(({ label, value, note, icon: Icon }) => (
                     <article
                       key={label}
-                      className="border-b border-r border-[#2d3e63] bg-[#121b30] p-4"
+                      className="border-b border-r border-[#383838] bg-[#1a1a1a] p-4"
                     >
-                      <div className="flex items-center justify-between font-mono text-[11px] font-bold tracking-[0.12em] text-[#94a4c9]">
+                      <div className="flex items-center justify-between text-sm font-bold text-[#aaaaaa]">
                         <span>{label}</span>
                         <Icon size={15} />
                       </div>
                       <div className="mt-3 text-3xl font-black tracking-[-0.04em] text-white">
                         {value}
                       </div>
-                      <p className="mt-1 text-xs text-[#8293ba]">{note}</p>
+                      <p className="mt-1 text-xs text-[#999999]">{note}</p>
                     </article>
                   ))}
                 </section>
 
-                <section className="mb-4 grid border border-[#314267] bg-[#0a1122] lg:grid-cols-[1fr_280px]">
-                  <div className="border-b border-[#314267] p-4 lg:border-b-0 lg:border-r">
+                <section className="mb-4 grid border border-[#414141] bg-[#111111] lg:grid-cols-[1fr_280px]">
+                  <div className="border-b border-[#414141] p-4 lg:border-b-0 lg:border-r">
                     <div className="mb-4 flex items-center justify-between">
-                      <div className="flex items-center gap-2 font-mono text-[9px] tracking-[0.14em] text-[#9daacc]">
-                        <Radio size={12} className="text-[#22d3ee]" />
+                      <div className="flex items-center gap-2 text-xs text-[#b0b0b0]">
+                        <Radio size={12} className="text-[#d4d4d4]" />
                         INGESTED SIGNAL VOLUME
                       </div>
-                      <div className="font-mono text-[9px] text-[#61749d]">
+                      <div className="text-xs text-[#737373]">
                         {signalBars.length} TIME BUCKETS
                       </div>
                     </div>
-                    <div className="flex h-20 items-end gap-1 border-b border-[#314267]">
+                    <div className="flex h-20 items-end gap-1 border-b border-[#414141]">
                       {signalBars.map((bar, index) => (
                         <div
                           key={`${bar.label}-${index}`}
@@ -586,38 +584,34 @@ export default function Home() {
                           title={`${bar.label} · ${bar.count} events`}
                         >
                           <span
-                            className={`block w-full ${bar.count >= 3 ? 'bg-[#ff4d4d]' : index === signalBars.length - 1 ? 'bg-[#4da3ff]' : 'bg-[#3c5482]'}`}
+                            className={`block w-full ${bar.count >= 3 ? 'bg-[#ff4d4d]' : index === signalBars.length - 1 ? 'bg-[#f5f5f5]' : 'bg-[#4f4f4f]'}`}
                             style={{ height: `${bar.height}%` }}
                           />
                         </div>
                       ))}
                     </div>
-                    <div className="mt-2 flex justify-between font-mono text-[8px] text-[#61749d]">
+                    <div className="mt-2 flex justify-between text-xs text-[#737373]">
                       <span>{signalBars[0]?.label ?? '--:--'} UTC</span>
                       <span>{signalBars.at(-1)?.label ?? '--:--'} UTC</span>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 lg:grid-cols-1">
-                    <div className="border-r border-[#314267] p-4 lg:border-b lg:border-r-0">
-                      <p className="font-mono text-[9px] tracking-[0.12em] text-[#788bb3]">
-                        DATA QUALITY
-                      </p>
+                    <div className="border-r border-[#414141] p-4 lg:border-b lg:border-r-0">
+                      <p className="text-xs text-[#8f8f8f]">DATA QUALITY</p>
                       <div className="mt-2 flex items-end justify-between">
-                        <strong className="text-2xl text-[#22d3ee]">
+                        <strong className="text-2xl text-[#d4d4d4]">
                           {dataQuality}%
                         </strong>
-                        <span className="font-mono text-[8px] text-[#7b8db5]">
+                        <span className="text-xs text-[#919191]">
                           SCHEMA MATCH
                         </span>
                       </div>
                     </div>
                     <div className="p-4">
-                      <p className="font-mono text-[9px] tracking-[0.12em] text-[#788bb3]">
-                        PRIVACY MODE
-                      </p>
-                      <div className="mt-2 flex items-center gap-2 text-[11px] text-[#4da3ff]">
+                      <p className="text-xs text-[#8f8f8f]">PRIVACY MODE</p>
+                      <div className="mt-2 flex items-center gap-2 text-sm text-[#f5f5f5]">
                         <ShieldCheck size={14} />
-                        LOCAL PROCESSING
+                        Redaction enabled
                       </div>
                     </div>
                   </div>
@@ -625,22 +619,22 @@ export default function Home() {
 
                 <section
                   id="incidents"
-                  className="grid min-h-[610px] border border-[#2d3e63] bg-[#0f172a] xl:grid-cols-[430px_minmax(0,1fr)]"
+                  className="grid min-h-[610px] border border-[#383838] bg-[#161616] xl:grid-cols-[430px_minmax(0,1fr)]"
                 >
-                  <div className="border-b border-[#2d3e63] xl:border-b-0 xl:border-r">
-                    <div className="border-b border-[#2d3e63] p-3">
-                      <label className="flex h-11 items-center gap-2 border border-[#2f426b] bg-[#0a1022] px-3 text-[#94a4c9] focus-within:border-[#4da3ff]">
+                  <div className="border-b border-[#383838] xl:border-b-0 xl:border-r">
+                    <div className="border-b border-[#383838] p-3">
+                      <label className="flex h-11 items-center gap-2 border border-[#3f3f3f] bg-[#111111] px-3 text-[#aaaaaa] focus-within:border-[#f5f5f5]">
                         <Search size={15} />
                         <input
                           value={query}
                           onChange={(event) => setQuery(event.target.value)}
                           placeholder="Filter incidents or services"
-                          className="w-full bg-[#0a1022] text-sm text-white outline-none placeholder:text-[#687aa2]"
+                          className="w-full bg-[#111111] text-sm text-white outline-none placeholder:text-[#7a7a7a]"
                         />
                         <Filter size={14} />
                       </label>
                     </div>
-                    <div className="flex items-center justify-between border-b border-[#2d3e63] px-4 py-3 font-mono text-[9px] tracking-[0.12em] text-[#788bb3]">
+                    <div className="flex items-center justify-between border-b border-[#383838] px-4 py-3 text-xs text-[#8f8f8f]">
                       <span>GROUPED INCIDENTS</span>
                       <span>{filteredIncidents.length} RESULTS</span>
                     </div>
@@ -654,7 +648,7 @@ export default function Home() {
                               setSelectedId(incident.id);
                               setTab('analysis');
                             }}
-                            className={`grid w-full grid-cols-[4px_1fr_auto] gap-3 border-b border-[#253555] px-3 py-4 text-left ${selected?.id === incident.id ? 'bg-[#1c2740]' : 'bg-[#0f172a] hover:bg-[#16213b]'}`}
+                            className={`grid w-full grid-cols-[4px_1fr_auto] gap-3 border-b border-[#303030] px-3 py-4 text-left ${selected?.id === incident.id ? 'bg-[#232323]' : 'bg-[#161616] hover:bg-[#1e1e1e]'}`}
                           >
                             <span
                               className={
@@ -662,19 +656,19 @@ export default function Home() {
                                   ? 'bg-[#ff4d4d]'
                                   : incident.severity === 'warning'
                                     ? 'bg-[#e5a50a]'
-                                    : 'bg-[#2f8fff]'
+                                    : 'bg-[#e5e5e5]'
                               }
                             />
                             <span className="min-w-0">
                               <span className="flex items-center gap-2">
-                                <span className="truncate text-[13px] font-medium text-[#eef3ff]">
+                                <span className="truncate text-[13px] font-medium text-[#f3f3f3]">
                                   {incident.title}
                                 </span>
-                                <span className="font-mono text-[9px] text-[#61749d]">
+                                <span className="text-xs text-[#737373]">
                                   #{incident.id}
                                 </span>
                               </span>
-                              <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-mono text-[9px] text-[#7b8db5]">
+                              <span className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[#919191]">
                                 <span>{incident.service}</span>
                                 <span>{incident.logs.length} LOGS</span>
                                 <span>{time(incident.started)}</span>
@@ -682,20 +676,20 @@ export default function Home() {
                             </span>
                             <span className="text-right">
                               <span
-                                className={`inline-block border px-1.5 py-0.5 font-mono text-[8px] ${severityStyles[incident.severity]}`}
+                                className={`inline-block border px-1.5 py-0.5 text-xs ${severityStyles[incident.severity]}`}
                               >
                                 {resolved.includes(incident.id)
                                   ? 'RESOLVED'
                                   : incident.severity.toUpperCase()}
                               </span>
-                              <span className="mt-2 block font-mono text-[10px] text-[#ff7777]">
+                              <span className="mt-2 block text-xs text-[#ff7777]">
                                 {incident.change}
                               </span>
                             </span>
                           </button>
                         ))
                       ) : (
-                        <div className="p-8 text-center text-xs text-[#788bb3]">
+                        <div className="p-8 text-center text-xs text-[#8f8f8f]">
                           No incidents match this filter.
                         </div>
                       )}
@@ -704,10 +698,10 @@ export default function Home() {
 
                   {selected ? (
                     <div className="min-w-0">
-                      <div className="border-b border-[#2d3e63] p-4 lg:p-5">
+                      <div className="border-b border-[#383838] p-4 lg:p-5">
                         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                           <div>
-                            <div className="mb-2 flex items-center gap-2 font-mono text-[9px] tracking-[0.12em] text-[#8293ba]">
+                            <div className="mb-2 flex items-center gap-2 text-xs text-[#999999]">
                               <span
                                 className={`size-1.5 ${selected.severity === 'critical' ? 'bg-[#ff4d4d]' : 'bg-[#e5a50a]'}`}
                               />
@@ -719,7 +713,7 @@ export default function Home() {
                             <h2 className="text-xl font-semibold tracking-[-0.03em] text-white">
                               {selected.title}
                             </h2>
-                            <p className="mt-1 font-mono text-[10px] text-[#7c8eb7]">
+                            <p className="mt-1 text-xs text-[#929292]">
                               {selected.service} · {selected.logs.length}{' '}
                               correlated events · {dateTime(selected.started)}{' '}
                               UTC
@@ -734,7 +728,7 @@ export default function Home() {
                                 setCopied(true);
                                 window.setTimeout(() => setCopied(false), 1600);
                               }}
-                              className="flex h-8 items-center gap-2 border border-[#3a507b] bg-[#17223c] px-3 text-[10px] text-[#b4bfdd] hover:text-white"
+                              className="flex h-8 items-center gap-2 border border-[#4c4c4c] bg-[#202020] px-3 text-xs text-[#c7c7c7] hover:text-white"
                             >
                               <Clipboard size={12} />
                               {copied ? 'COPIED' : 'FINGERPRINT'}
@@ -746,7 +740,7 @@ export default function Home() {
                                   `incident-${selected.id}-report.txt`,
                                 )
                               }
-                              className="flex h-8 items-center gap-2 border border-[#3a507b] bg-[#17223c] px-3 text-[10px] text-[#b4bfdd] hover:text-white"
+                              className="flex h-8 items-center gap-2 border border-[#4c4c4c] bg-[#202020] px-3 text-xs text-[#c7c7c7] hover:text-white"
                             >
                               <ArrowDownToLine size={12} />
                               EXPORT
@@ -759,7 +753,7 @@ export default function Home() {
                                     : [...items, selected.id],
                                 )
                               }
-                              className="h-8 border border-[#4da3ff] px-3 text-[10px] font-bold text-[#4da3ff] hover:bg-[#4da3ff] hover:text-black"
+                              className="h-8 border border-[#f5f5f5] px-3 text-xs font-bold text-[#f5f5f5] hover:bg-[#f5f5f5] hover:text-black"
                             >
                               {resolved.includes(selected.id)
                                 ? 'REOPEN'
@@ -769,18 +763,18 @@ export default function Home() {
                         </div>
                       </div>
 
-                      <div className="grid border-b border-[#2d3e63] md:grid-cols-[minmax(0,1fr)_180px]">
-                        <div className="border-b border-[#2d3e63] bg-[#16213a] p-4 md:border-b-0 md:border-r lg:p-5">
-                          <div className="flex items-center gap-2 font-mono text-[9px] tracking-[0.12em] text-[#4da3ff]">
+                      <div className="grid border-b border-[#383838] md:grid-cols-[minmax(0,1fr)_180px]">
+                        <div className="border-b border-[#383838] bg-[#1e1e1e] p-4 md:border-b-0 md:border-r lg:p-5">
+                          <div className="flex items-center gap-2 text-xs text-[#f5f5f5]">
                             <Sparkles size={13} />
                             CORRELATION RESULT
                           </div>
                           <p className="mt-3 text-sm font-medium text-white">
                             Likely trigger: {selected.trigger}
                           </p>
-                          <p className="mt-1 text-[11px] leading-relaxed text-[#899ac0]">
+                          <p className="mt-1 text-sm leading-relaxed text-[#a0a0a0]">
                             The earliest matching failures appeared in{' '}
-                            <span className="text-[#c4cee6]">
+                            <span className="text-[#d6d6d6]">
                               {selected.service}
                             </span>
                             . CrashLens linked events using service identity,
@@ -788,43 +782,41 @@ export default function Home() {
                             deployment signals.
                           </p>
                         </div>
-                        <div className="flex items-center justify-between bg-[#121c32] p-4 md:block lg:p-5">
+                        <div className="flex items-center justify-between bg-[#1b1b1b] p-4 md:block lg:p-5">
                           <div>
-                            <p className="font-mono text-[9px] tracking-[0.12em] text-[#7486ae]">
-                              CONFIDENCE
-                            </p>
-                            <p className="mt-2 text-3xl font-semibold text-[#4da3ff]">
+                            <p className="text-xs text-[#8a8a8a]">CONFIDENCE</p>
+                            <p className="mt-2 text-3xl font-semibold text-[#f5f5f5]">
                               {selected.confidence}%
                             </p>
                           </div>
-                          <div className="mt-3 h-1.5 w-full bg-[#2d3e63]">
+                          <div className="mt-3 h-1.5 w-full bg-[#383838]">
                             <div
-                              className="h-full bg-[#4da3ff]"
+                              className="h-full bg-[#f5f5f5]"
                               style={{ width: `${selected.confidence}%` }}
                             />
                           </div>
-                          <p className="mt-2 font-mono text-[8px] text-[#6578a0]">
+                          <p className="mt-2 text-xs text-[#777777]">
                             FINGERPRINT MATCH
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex h-11 border-b border-[#2d3e63] bg-[#0e1629] px-4">
+                      <div className="flex h-11 border-b border-[#383838] bg-[#151515] px-4">
                         <button
                           onClick={() => setTab('analysis')}
-                          className={`mr-6 border-b-2 px-1 text-[10px] font-bold ${tab === 'analysis' ? 'border-[#4da3ff] text-[#4da3ff]' : 'border-transparent text-[#788bb3]'}`}
+                          className={`mr-6 border-b-2 px-1 text-xs font-bold ${tab === 'analysis' ? 'border-[#f5f5f5] text-[#f5f5f5]' : 'border-transparent text-[#8f8f8f]'}`}
                         >
                           AI ANALYSIS
                         </button>
                         <button
                           onClick={() => setTab('timeline')}
-                          className={`mr-6 border-b-2 px-1 text-[10px] font-bold ${tab === 'timeline' ? 'border-[#4da3ff] text-[#4da3ff]' : 'border-transparent text-[#788bb3]'}`}
+                          className={`mr-6 border-b-2 px-1 text-xs font-bold ${tab === 'timeline' ? 'border-[#f5f5f5] text-[#f5f5f5]' : 'border-transparent text-[#8f8f8f]'}`}
                         >
                           TIMELINE
                         </button>
                         <button
                           onClick={() => setTab('logs')}
-                          className={`border-b-2 px-1 text-[10px] font-bold ${tab === 'logs' ? 'border-[#4da3ff] text-[#4da3ff]' : 'border-transparent text-[#788bb3]'}`}
+                          className={`border-b-2 px-1 text-xs font-bold ${tab === 'logs' ? 'border-[#f5f5f5] text-[#f5f5f5]' : 'border-transparent text-[#8f8f8f]'}`}
                         >
                           LOGS ({selected.logs.length})
                         </button>
@@ -836,12 +828,12 @@ export default function Home() {
                       >
                         {tab === 'analysis' ? (
                           <div className="grid gap-3 md:grid-cols-3">
-                            <div className="border border-[#314267] bg-[#121b31] p-4">
-                              <div className="mb-3 flex items-center gap-2 font-mono text-[9px] text-[#22d3ee]">
+                            <div className="border border-[#414141] bg-[#1b1b1b] p-4">
+                              <div className="mb-3 flex items-center gap-2 text-xs text-[#d4d4d4]">
                                 <Crosshair size={12} />
                                 01 / ORIGIN
                               </div>
-                              <p className="text-[11px] leading-relaxed text-[#c7d1e8]">
+                              <p className="text-sm leading-relaxed text-[#dadada]">
                                 First failures originated in{' '}
                                 <strong className="font-medium text-white">
                                   {selected.service}
@@ -849,12 +841,12 @@ export default function Home() {
                                 at {time(selected.started)} UTC.
                               </p>
                             </div>
-                            <div className="border border-[#314267] bg-[#121b31] p-4">
-                              <div className="mb-3 flex items-center gap-2 font-mono text-[9px] text-[#e5a50a]">
+                            <div className="border border-[#414141] bg-[#1b1b1b] p-4">
+                              <div className="mb-3 flex items-center gap-2 text-xs text-[#e5a50a]">
                                 <Zap size={12} />
                                 02 / TRIGGER
                               </div>
-                              <p className="text-[11px] leading-relaxed text-[#c7d1e8]">
+                              <p className="text-sm leading-relaxed text-[#dadada]">
                                 Nearest correlated operational change:{' '}
                                 <strong className="font-medium text-white">
                                   {selected.trigger}
@@ -862,35 +854,35 @@ export default function Home() {
                                 .
                               </p>
                             </div>
-                            <div className="border border-[#314267] bg-[#121b31] p-4">
-                              <div className="mb-3 flex items-center gap-2 font-mono text-[9px] text-[#4da3ff]">
+                            <div className="border border-[#414141] bg-[#1b1b1b] p-4">
+                              <div className="mb-3 flex items-center gap-2 text-xs text-[#f5f5f5]">
                                 <CircleCheck size={12} />
                                 03 / NEXT ACTION
                               </div>
-                              <p className="text-[11px] leading-relaxed text-[#c7d1e8]">
+                              <p className="text-sm leading-relaxed text-[#dadada]">
                                 Check the deployment diff and service
                                 dependencies, then rollback if the error rate
                                 continues rising.
                               </p>
                             </div>
-                            <div className="border border-[#314267] bg-[#0a1122] p-4 md:col-span-3">
-                              <p className="font-mono text-[9px] text-[#788bb3]">
+                            <div className="border border-[#414141] bg-[#111111] p-4 md:col-span-3">
+                              <p className="text-xs text-[#8f8f8f]">
                                 CAUSAL CHAIN
                               </p>
-                              <div className="mt-3 flex flex-wrap items-center gap-2 font-mono text-[9px]">
-                                <span className="border border-[#6276a0] px-2 py-1.5 text-[#bac5e0]">
+                              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                                <span className="border border-[#757575] px-2 py-1.5 text-[#cecece]">
                                   {selected.trigger}
                                 </span>
                                 <ChevronRight
                                   size={12}
-                                  className="text-[#6578a0]"
+                                  className="text-[#777777]"
                                 />
-                                <span className="border border-[#22d3ee] px-2 py-1.5 text-[#22d3ee]">
+                                <span className="border border-[#d4d4d4] px-2 py-1.5 text-[#d4d4d4]">
                                   {selected.service}
                                 </span>
                                 <ChevronRight
                                   size={12}
-                                  className="text-[#6578a0]"
+                                  className="text-[#777777]"
                                 />
                                 <span className="border border-[#ff4d4d] px-2 py-1.5 text-[#ff7777]">
                                   {selected.title}
@@ -905,24 +897,24 @@ export default function Home() {
                                 key={`${event.timestamp}-${index}`}
                                 className="grid grid-cols-[46px_18px_1fr] gap-3"
                               >
-                                <span className="pt-0.5 font-mono text-[9px] text-[#7082aa]">
+                                <span className="pt-0.5 text-xs text-[#858585]">
                                   {event.time}
                                 </span>
                                 <span className="relative flex justify-center">
                                   <span
-                                    className={`relative z-10 mt-0.5 size-2.5 border border-[#0f172a] ${event.type === 'critical' ? 'bg-[#ff4d4d]' : event.type === 'deploy' ? 'bg-[#4da3ff]' : event.type === 'alert' ? 'bg-[#e5a50a]' : 'bg-[#6276a0]'}`}
+                                    className={`relative z-10 mt-0.5 size-2.5 border border-[#161616] ${event.type === 'critical' ? 'bg-[#ff4d4d]' : event.type === 'deploy' ? 'bg-[#f5f5f5]' : event.type === 'alert' ? 'bg-[#e5a50a]' : 'bg-[#757575]'}`}
                                   />
                                   {index < selected.timeline.length - 1 && (
-                                    <span className="absolute top-2 h-full w-px bg-[#32446b]" />
+                                    <span className="absolute top-2 h-full w-px bg-[#424242]" />
                                   )}
                                 </span>
                                 <span className="pb-5">
                                   <span
-                                    className={`block text-[11px] ${event.type === 'critical' ? 'text-[#ff8585]' : 'text-[#d5ddf0]'}`}
+                                    className={`block text-sm ${event.type === 'critical' ? 'text-[#ff8585]' : 'text-[#e5e5e5]'}`}
                                   >
                                     {event.title}
                                   </span>
-                                  <span className="mt-0.5 block font-mono text-[9px] text-[#6b7ea7]">
+                                  <span className="mt-0.5 block text-xs text-[#808080]">
                                     {event.detail}
                                   </span>
                                 </span>
@@ -930,8 +922,8 @@ export default function Home() {
                             ))}
                           </div>
                         ) : (
-                          <div className="min-w-[650px] font-mono text-[9px]">
-                            <div className="grid grid-cols-[70px_58px_130px_1fr] border-b border-[#32446b] pb-2 text-[#6b7ea7]">
+                          <div className="min-w-[650px] text-xs">
+                            <div className="grid grid-cols-[70px_58px_130px_1fr] border-b border-[#424242] pb-2 text-[#808080]">
                               <span>TIME</span>
                               <span>LEVEL</span>
                               <span>SERVICE</span>
@@ -940,7 +932,7 @@ export default function Home() {
                             {selected.logs.map((log) => (
                               <div
                                 key={log.id}
-                                className="grid grid-cols-[70px_58px_130px_1fr] border-b border-[#202e4e] py-2 text-[#9daacc]"
+                                className="grid grid-cols-[70px_58px_130px_1fr] border-b border-[#2a2a2a] py-2 text-[#b0b0b0]"
                               >
                                 <span>{time(log.timestamp)}</span>
                                 <span
@@ -953,7 +945,7 @@ export default function Home() {
                                 >
                                   {log.level.toUpperCase()}
                                 </span>
-                                <span className="truncate pr-3 text-[#4da3ff]">
+                                <span className="truncate pr-3 text-[#f5f5f5]">
                                   {log.service}
                                 </span>
                                 <span className="truncate">{log.message}</span>
@@ -964,7 +956,7 @@ export default function Home() {
                       </div>
                     </div>
                   ) : (
-                    <div className="grid place-items-center p-10 text-xs text-[#788bb3]">
+                    <div className="grid place-items-center p-10 text-xs text-[#8f8f8f]">
                       Upload a file containing errors to create an incident.
                     </div>
                   )}
@@ -990,24 +982,22 @@ export default function Home() {
       </div>
 
       {uploadOpen && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-[#050816] p-4">
-          <div className="w-full max-w-xl border-2 border-[#4da3ff] bg-[#111a2d] shadow-[12px_12px_0_#000]">
-            <div className="flex items-start justify-between border-b border-[#314267] p-5">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-[#090909] p-4">
+          <div className="w-full max-w-xl border-2 border-[#f5f5f5] bg-[#181818] shadow-2xl">
+            <div className="flex items-start justify-between border-b border-[#414141] p-5">
               <div>
-                <p className="font-mono text-[9px] tracking-[0.14em] text-[#4da3ff]">
-                  DATA INGESTION
-                </p>
+                <p className="text-xs text-[#f5f5f5]">Log upload</p>
                 <h2 className="mt-1 text-lg font-semibold text-white">
                   Analyze a log file
                 </h2>
-                <p className="mt-1 text-[11px] text-[#8293ba]">
+                <p className="mt-1 text-sm text-[#999999]">
                   Analysis runs in the browser, then a redacted copy is saved to
                   your authenticated workspace.
                 </p>
               </div>
               <button
                 onClick={() => setUploadOpen(false)}
-                className="text-[#788bb3] hover:text-white"
+                className="text-[#8f8f8f] hover:text-white"
               >
                 <X size={18} />
               </button>
@@ -1028,43 +1018,43 @@ export default function Home() {
               onDragLeave={() => setDragging(false)}
               onDrop={onDrop}
               onClick={() => inputRef.current?.click()}
-              className={`m-5 grid min-h-52 w-[calc(100%-2.5rem)] cursor-pointer place-items-center border border-dashed p-6 text-center ${dragging ? 'border-[#4da3ff] bg-[#1c2740]' : 'border-[#455a85] bg-[#0d1326] hover:border-[#7a8fb8]'}`}
+              className={`m-5 grid min-h-52 w-[calc(100%-2.5rem)] cursor-pointer place-items-center border border-dashed p-6 text-center ${dragging ? 'border-[#f5f5f5] bg-[#232323]' : 'border-[#5a5a5a] bg-[#131313] hover:border-[#929292]'}`}
             >
               {processing ? (
                 <span>
                   <LoaderCircle
                     size={26}
-                    className="mx-auto animate-spin text-[#4da3ff]"
+                    className="mx-auto animate-spin text-[#f5f5f5]"
                   />
-                  <span className="mt-3 block font-mono text-[10px] text-[#4da3ff]">
+                  <span className="mt-3 block text-xs text-[#f5f5f5]">
                     PARSING + CLUSTERING
                   </span>
                 </span>
               ) : (
                 <span>
-                  <Upload size={25} className="mx-auto text-[#4da3ff]" />
+                  <Upload size={25} className="mx-auto text-[#f5f5f5]" />
                   <span className="mt-3 block text-sm font-medium text-white">
                     Drop a file here or click to browse
                   </span>
-                  <span className="mt-2 block font-mono text-[9px] text-[#7486ae]">
+                  <span className="mt-2 block text-xs text-[#8a8a8a]">
                     TXT · LOG · CSV · JSONL · NDJSON / MAX 5 MB
                   </span>
                 </span>
               )}
             </button>
             {error && (
-              <p className="mx-5 mb-3 border border-[#8f3333] bg-[#210d0f] p-3 text-[10px] text-[#ff8585]">
+              <p className="mx-5 mb-3 border border-[#8f3333] bg-[#210d0f] p-3 text-xs text-[#ff8585]">
                 {error}
               </p>
             )}
-            <div className="border-t border-[#314267] bg-[#0d1326] p-5">
+            <div className="border-t border-[#414141] bg-[#131313] p-5">
               <div className="mb-3 flex items-center justify-between">
-                <span className="font-mono text-[9px] tracking-[0.12em] text-[#788bb3]">
+                <span className="text-xs text-[#8f8f8f]">
                   DON&apos;T HAVE LOGS?
                 </span>
                 <button
                   onClick={resetSample}
-                  className="text-[10px] font-bold text-[#4da3ff]"
+                  className="text-xs font-bold text-[#f5f5f5]"
                 >
                   LOAD BUILT-IN SAMPLE
                 </button>
@@ -1075,7 +1065,7 @@ export default function Home() {
                     key={label}
                     href={`/samples/crashlens-sample.${extension}`}
                     download
-                    className="flex items-center justify-center gap-2 border border-[#364a74] bg-[#151f36] py-2 text-[10px] text-[#a3b1d2] hover:border-[#697da8] hover:text-white"
+                    className="flex items-center justify-center gap-2 border border-[#484848] bg-[#1c1c1c] py-2 text-xs text-[#b7b7b7] hover:border-[#7d7d7d] hover:text-white"
                   >
                     <Icon size={12} />
                     {label}
@@ -1133,16 +1123,16 @@ function OperationsConsole({
 
   if (!workspace)
     return (
-      <section className="grid min-h-72 place-items-center border border-[#2d3e63] bg-[#0f172a] p-10 text-center">
+      <section className="grid min-h-72 place-items-center border border-[#383838] bg-[#161616] p-10 text-center">
         <div>
           <LoaderCircle
-            className="mx-auto mb-3 animate-spin text-[#4da3ff]"
+            className="mx-auto mb-3 animate-spin text-[#f5f5f5]"
             size={22}
           />
           <p className="text-sm text-white">
             Connecting authenticated workspace
           </p>
-          <p className="mt-1 text-[10px] text-[#788bb3]">
+          <p className="mt-1 text-xs text-[#8f8f8f]">
             The local analyzer remains available while services initialize.
           </p>
         </div>
@@ -1151,23 +1141,23 @@ function OperationsConsole({
 
   if (view === 'history')
     return (
-      <section className="grid min-h-[620px] border border-[#2d3e63] bg-[#0f172a] xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,.7fr)]">
-        <div className="border-b border-[#2d3e63] xl:border-b-0 xl:border-r">
-          <div className="flex items-center justify-between border-b border-[#2d3e63] p-4">
+      <section className="grid min-h-[620px] border border-[#383838] bg-[#161616] xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,.7fr)]">
+        <div className="border-b border-[#383838] xl:border-b-0 xl:border-r">
+          <div className="flex items-center justify-between border-b border-[#383838] p-4">
             <div>
-              <p className="font-mono text-[9px] tracking-[.14em] text-[#4da3ff]">
+              <p className="text-xs text-[#f5f5f5]">
                 PERSISTENT INCIDENT HISTORY
               </p>
-              <p className="mt-1 text-xs text-[#8293ba]">
+              <p className="mt-1 text-xs text-[#999999]">
                 {workspace.ingestionCount} saved ingestion runs · refreshes
                 every 15 seconds
               </p>
             </div>
-            <History size={18} className="text-[#788bb3]" />
+            <History size={18} className="text-[#8f8f8f]" />
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px] text-left text-[11px]">
-              <thead className="bg-[#0a1022] font-mono text-[9px] text-[#788bb3]">
+            <table className="w-full min-w-[700px] text-left text-sm">
+              <thead className="bg-[#111111] text-xs text-[#8f8f8f]">
                 <tr>
                   <th className="p-3">INCIDENT</th>
                   <th>SERVICE</th>
@@ -1182,10 +1172,10 @@ function OperationsConsole({
                   <tr
                     key={String(incident.id)}
                     onClick={() => setHistoryIncidentId(String(incident.id))}
-                    className={`cursor-pointer border-t border-[#253555] ${historyIncidentId === String(incident.id) ? 'bg-[#1c2740]' : 'hover:bg-[#16213b]'}`}
+                    className={`cursor-pointer border-t border-[#303030] ${historyIncidentId === String(incident.id) ? 'bg-[#232323]' : 'hover:bg-[#1e1e1e]'}`}
                   >
                     <td className="p-3 text-white">{String(incident.title)}</td>
-                    <td className="font-mono text-[#22d3ee]">
+                    <td className="text-[#d4d4d4]">
                       {String(incident.service)}
                     </td>
                     <td className="text-[#ff7777]">
@@ -1193,7 +1183,7 @@ function OperationsConsole({
                     </td>
                     <td>{String(incident.status)}</td>
                     <td>{String(incident.assignee_name ?? 'Unassigned')}</td>
-                    <td className="font-mono text-[#788bb3]">
+                    <td className="text-[#8f8f8f]">
                       {dateTime(String(incident.updated_at))}
                     </td>
                   </tr>
@@ -1201,22 +1191,20 @@ function OperationsConsole({
               </tbody>
             </table>
             {!workspace.incidents.length && (
-              <p className="p-10 text-center text-xs text-[#788bb3]">
+              <p className="p-10 text-center text-xs text-[#8f8f8f]">
                 Upload a log file to create durable incident history.
               </p>
             )}
           </div>
         </div>
         <div className="p-4 lg:p-5">
-          <p className="font-mono text-[9px] tracking-[.14em] text-[#788bb3]">
-            INCIDENT COLLABORATION
-          </p>
+          <p className="text-xs text-[#8f8f8f]">INCIDENT COLLABORATION</p>
           {selectedHistory ? (
             <>
               <h2 className="mt-2 text-lg font-semibold text-white">
                 {String(selectedHistory.title)}
               </h2>
-              <p className="mt-1 text-[10px] text-[#8293ba]">
+              <p className="mt-1 text-xs text-[#999999]">
                 #{String(selectedHistory.id)} ·{' '}
                 {String(selectedHistory.fingerprint)}
               </p>
@@ -1231,7 +1219,7 @@ function OperationsConsole({
                       assignedTo: workspace.user.id,
                     })
                   }
-                  className="border border-[#22d3ee] p-2 text-[10px] font-bold text-[#22d3ee] disabled:opacity-50"
+                  className="border border-[#d4d4d4] p-2 text-xs font-bold text-[#d4d4d4] disabled:opacity-50"
                 >
                   ASSIGN TO ME
                 </button>
@@ -1244,7 +1232,7 @@ function OperationsConsole({
                       status: 'resolved',
                     })
                   }
-                  className="border border-[#4da3ff] p-2 text-[10px] font-bold text-[#4da3ff] disabled:opacity-50"
+                  className="border border-[#f5f5f5] p-2 text-xs font-bold text-[#f5f5f5] disabled:opacity-50"
                 >
                   RESOLVE
                 </button>
@@ -1265,7 +1253,7 @@ function OperationsConsole({
               >
                 <label
                   htmlFor="incident-comment"
-                  className="font-mono text-[9px] text-[#788bb3]"
+                  className="text-xs text-[#8f8f8f]"
                 >
                   ADD INVESTIGATION NOTE
                 </label>
@@ -1275,21 +1263,19 @@ function OperationsConsole({
                   onChange={(event) => setComment(event.target.value)}
                   required
                   maxLength={2000}
-                  className="mt-2 h-24 w-full resize-none border border-[#3a507b] bg-[#0a1022] p-3 text-xs text-white outline-none focus:border-[#4da3ff]"
+                  className="mt-2 h-24 w-full resize-none border border-[#4c4c4c] bg-[#111111] p-3 text-xs text-white outline-none focus:border-[#f5f5f5]"
                   placeholder="What did you find?"
                 />
                 <button
                   disabled={busy}
-                  className="mt-2 flex h-9 items-center gap-2 bg-[#4da3ff] px-4 text-[10px] font-bold text-black disabled:opacity-50"
+                  className="mt-2 flex h-9 items-center gap-2 bg-[#f5f5f5] px-4 text-xs font-bold text-black disabled:opacity-50"
                 >
                   <Send size={12} />
                   POST NOTE
                 </button>
               </form>
-              <div className="mt-5 border-t border-[#2d3e63] pt-4">
-                <p className="font-mono text-[9px] text-[#788bb3]">
-                  RECENT NOTES
-                </p>
+              <div className="mt-5 border-t border-[#383838] pt-4">
+                <p className="text-xs text-[#8f8f8f]">RECENT NOTES</p>
                 {workspace.comments
                   .filter(
                     (item) =>
@@ -1299,12 +1285,12 @@ function OperationsConsole({
                   .map((item) => (
                     <div
                       key={String(item.id)}
-                      className="mt-2 border-l-2 border-[#455a85] bg-[#121b31] p-3"
+                      className="mt-2 border-l-2 border-[#5a5a5a] bg-[#1b1b1b] p-3"
                     >
-                      <p className="text-[10px] text-[#aeb9d7]">
+                      <p className="text-xs text-[#c0c0c0]">
                         {String(item.body)}
                       </p>
-                      <p className="mt-2 font-mono text-[8px] text-[#6578a0]">
+                      <p className="mt-2 text-xs text-[#777777]">
                         {String(item.user_name ?? item.user_email)} ·{' '}
                         {dateTime(String(item.created_at))}
                       </p>
@@ -1313,7 +1299,7 @@ function OperationsConsole({
               </div>
             </>
           ) : (
-            <p className="mt-5 text-xs text-[#788bb3]">
+            <p className="mt-5 text-xs text-[#8f8f8f]">
               Select an incident to collaborate.
             </p>
           )}
@@ -1324,42 +1310,38 @@ function OperationsConsole({
   if (view === 'team')
     return (
       <section className="grid gap-4 lg:grid-cols-2">
-        <article className="border border-[#2d3e63] bg-[#0f172a]">
-          <div className="border-b border-[#2d3e63] p-4">
-            <p className="font-mono text-[9px] tracking-[.14em] text-[#4da3ff]">
-              TEAM MEMBERS
-            </p>
+        <article className="border border-[#383838] bg-[#161616]">
+          <div className="border-b border-[#383838] p-4">
+            <p className="text-xs text-[#f5f5f5]">TEAM MEMBERS</p>
             <h2 className="mt-1 text-lg text-white">{workspace.team.name}</h2>
           </div>
           <div>
             {workspace.members.map((member) => (
               <div
                 key={String(member.id)}
-                className="flex items-center border-b border-[#253555] p-4"
+                className="flex items-center border-b border-[#303030] p-4"
               >
-                <span className="grid size-9 place-items-center bg-[#1d2a47] font-bold text-[#4da3ff]">
+                <span className="grid size-9 place-items-center bg-[#262626] font-bold text-[#f5f5f5]">
                   {String(member.name).slice(0, 2).toUpperCase()}
                 </span>
                 <span className="ml-3">
                   <strong className="block text-xs text-white">
                     {String(member.name)}
                   </strong>
-                  <span className="text-[10px] text-[#788bb3]">
+                  <span className="text-xs text-[#8f8f8f]">
                     {String(member.email)}
                   </span>
                 </span>
-                <span className="ml-auto border border-[#455a85] px-2 py-1 font-mono text-[8px] text-[#aeb9d7]">
+                <span className="ml-auto border border-[#5a5a5a] px-2 py-1 text-xs text-[#c0c0c0]">
                   {String(member.role).toUpperCase()}
                 </span>
               </div>
             ))}
           </div>
         </article>
-        <article className="border border-[#2d3e63] bg-[#0f172a] p-5">
-          <p className="font-mono text-[9px] tracking-[.14em] text-[#4da3ff]">
-            INVITE COLLABORATOR
-          </p>
-          <p className="mt-2 text-xs leading-relaxed text-[#8293ba]">
+        <article className="border border-[#383838] bg-[#161616] p-5">
+          <p className="text-xs text-[#f5f5f5]">INVITE COLLABORATOR</p>
+          <p className="mt-2 text-xs leading-relaxed text-[#999999]">
             Create a tracked team invitation. Delivery is ready for an email
             provider secret.
           </p>
@@ -1383,23 +1365,21 @@ function OperationsConsole({
               type="email"
               required
               placeholder="engineer@company.com"
-              className="min-w-0 flex-1 border border-[#3a507b] bg-[#0a1022] px-3 text-xs text-white outline-none focus:border-[#4da3ff]"
+              className="min-w-0 flex-1 border border-[#4c4c4c] bg-[#111111] px-3 text-xs text-white outline-none focus:border-[#f5f5f5]"
             />
             <button
               disabled={busy}
-              className="bg-[#4da3ff] px-4 py-3 text-[10px] font-bold text-black"
+              className="bg-[#f5f5f5] px-4 py-3 text-xs font-bold text-black"
             >
               INVITE
             </button>
           </form>
           <div className="mt-5">
-            <p className="font-mono text-[9px] text-[#788bb3]">
-              PENDING INVITES
-            </p>
+            <p className="text-xs text-[#8f8f8f]">PENDING INVITES</p>
             {workspace.invites.map((invite) => (
               <div
                 key={String(invite.id)}
-                className="mt-2 flex border border-[#2d3e63] p-3 text-[10px]"
+                className="mt-2 flex border border-[#383838] p-3 text-xs"
               >
                 <span className="text-white">{String(invite.email)}</span>
                 <span className="ml-auto text-[#e5a50a]">
@@ -1415,16 +1395,16 @@ function OperationsConsole({
   if (view === 'integrations')
     return (
       <section>
-        <div className="mb-4 border border-[#2d3e63] bg-[#0f172a] p-4">
-          <p className="font-mono text-[9px] tracking-[.14em] text-[#4da3ff]">
+        <div className="mb-4 border border-[#383838] bg-[#161616] p-4">
+          <p className="text-xs text-[#f5f5f5]">
             INGEST + INVESTIGATE + NOTIFY
           </p>
-          <p className="mt-1 text-xs text-[#8293ba]">
+          <p className="mt-1 text-xs text-[#999999]">
             Configure the integration record here, then add its secret in the
             deployment environment. Secrets are never collected in this browser.
           </p>
         </div>
-        <div className="grid gap-px bg-[#2d3e63] border border-[#2d3e63] md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-px bg-[#383838] border border-[#383838] md:grid-cols-2 xl:grid-cols-3">
           {connectorTypes.map(([type, name, description]) => {
             const connector = workspace.connectors.find(
               (item) => item.type === type,
@@ -1440,11 +1420,11 @@ function OperationsConsole({
                       ? workspace.capabilities.externalIngestion
                       : false;
             return (
-              <article key={type} className="bg-[#0f172a] p-5">
+              <article key={type} className="bg-[#161616] p-5">
                 <div className="flex items-start justify-between">
-                  <Plug size={18} className="text-[#22d3ee]" />
+                  <Plug size={18} className="text-[#d4d4d4]" />
                   <span
-                    className={`font-mono text-[8px] ${configured ? 'text-[#4da3ff]' : connector ? 'text-[#e5a50a]' : 'text-[#788bb3]'}`}
+                    className={`text-xs ${configured ? 'text-[#f5f5f5]' : connector ? 'text-[#e5a50a]' : 'text-[#8f8f8f]'}`}
                   >
                     {configured
                       ? 'ACTIVE'
@@ -1456,7 +1436,7 @@ function OperationsConsole({
                 <h3 className="mt-4 text-sm font-semibold text-white">
                   {name}
                 </h3>
-                <p className="mt-1 min-h-8 text-[10px] leading-relaxed text-[#8293ba]">
+                <p className="mt-1 min-h-8 text-xs leading-relaxed text-[#999999]">
                   {description}
                 </p>
                 <button
@@ -1490,7 +1470,7 @@ function OperationsConsole({
                     }
                     await action({ action: 'connector', type, name });
                   }}
-                  className="mt-4 w-full border border-[#455a85] py-2 text-[9px] font-bold text-[#c4cee6] hover:border-[#4da3ff] hover:text-[#4da3ff] disabled:opacity-50"
+                  className="mt-4 w-full border border-[#5a5a5a] py-2 text-xs font-bold text-[#d6d6d6] hover:border-[#f5f5f5] hover:text-[#f5f5f5] disabled:opacity-50"
                 >
                   {(type === 'slack' || type === 'email') && configured
                     ? 'SEND TEST ALERT'
@@ -1505,11 +1485,9 @@ function OperationsConsole({
           })}
         </div>
         {aiResult && (
-          <div className="mt-4 border border-[#22d3ee] bg-[#07171b] p-4">
-            <p className="font-mono text-[9px] text-[#22d3ee]">
-              OPENAI ROOT-CAUSE RESULT
-            </p>
-            <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-[#d4dcef]">
+          <div className="mt-4 border border-[#d4d4d4] bg-[#101010] p-4">
+            <p className="text-xs text-[#d4d4d4]">OPENAI ROOT-CAUSE RESULT</p>
+            <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-[#e3e3e3]">
               {aiResult}
             </p>
           </div>
@@ -1521,11 +1499,9 @@ function OperationsConsole({
     <div className="space-y-6">
       <UptimePanel />
       <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-        <article className="border border-[#2d3e63] bg-[#0f172a] p-5">
-          <p className="font-mono text-[9px] tracking-[.14em] text-[#4da3ff]">
-            PLATFORM HEALTH
-          </p>
-          <div className="mt-5 grid grid-cols-2 gap-px bg-[#2d3e63] border border-[#2d3e63]">
+        <article className="border border-[#383838] bg-[#161616] p-5">
+          <p className="text-xs text-[#f5f5f5]">PLATFORM HEALTH</p>
+          <div className="mt-5 grid grid-cols-2 gap-px bg-[#383838] border border-[#383838]">
             {[
               ['API', health?.status === 'healthy'],
               ['DATABASE', workspace.capabilities.database],
@@ -1539,51 +1515,47 @@ function OperationsConsole({
             ].map(([label, ready]) => (
               <div
                 key={String(label)}
-                className="flex items-center bg-[#121b31] p-3"
+                className="flex items-center bg-[#1b1b1b] p-3"
               >
                 <span
-                  className={`mr-2 size-2 ${ready ? 'bg-[#4da3ff]' : 'bg-[#e5a50a]'}`}
+                  className={`mr-2 size-2 ${ready ? 'bg-[#f5f5f5]' : 'bg-[#e5a50a]'}`}
                 />
-                <span className="text-[10px] text-[#aeb9d7]">
-                  {String(label)}
-                </span>
-                <span className="ml-auto font-mono text-[8px] text-[#788bb3]">
+                <span className="text-xs text-[#c0c0c0]">{String(label)}</span>
+                <span className="ml-auto text-xs text-[#8f8f8f]">
                   {ready ? 'READY' : 'NEEDS SECRET'}
                 </span>
               </div>
             ))}
           </div>
-          <p className="mt-4 font-mono text-[9px] text-[#788bb3]">
+          <p className="mt-4 text-xs text-[#8f8f8f]">
             HEALTH LATENCY: {health?.latencyMs ?? '—'} MS · AUTO REFRESH: 15 SEC
           </p>
         </article>
-        <article className="border border-[#2d3e63] bg-[#0f172a]">
-          <div className="border-b border-[#2d3e63] p-5">
-            <p className="font-mono text-[9px] tracking-[.14em] text-[#4da3ff]">
-              SECURITY AUDIT TRAIL
-            </p>
+        <article className="border border-[#383838] bg-[#161616]">
+          <div className="border-b border-[#383838] p-5">
+            <p className="text-xs text-[#f5f5f5]">SECURITY AUDIT TRAIL</p>
           </div>
           <div className="max-h-[430px] overflow-auto">
             {workspace.auditEvents.map((event, index) => (
               <div
                 key={`${event.target_id}-${index}`}
-                className="border-b border-[#253555] p-4"
+                className="border-b border-[#303030] p-4"
               >
                 <div className="flex">
-                  <span className="font-mono text-[9px] text-[#22d3ee]">
+                  <span className="text-xs text-[#d4d4d4]">
                     {String(event.action).toUpperCase()}
                   </span>
-                  <span className="ml-auto font-mono text-[8px] text-[#6578a0]">
+                  <span className="ml-auto text-xs text-[#777777]">
                     {dateTime(String(event.created_at))}
                   </span>
                 </div>
-                <p className="mt-1 text-[10px] text-[#8293ba]">
+                <p className="mt-1 text-xs text-[#999999]">
                   {String(event.target_type)} / {String(event.target_id)}
                 </p>
               </div>
             ))}
             {!workspace.auditEvents.length && (
-              <p className="p-10 text-center text-xs text-[#788bb3]">
+              <p className="p-10 text-center text-xs text-[#8f8f8f]">
                 Audit events appear after uploads and team actions.
               </p>
             )}

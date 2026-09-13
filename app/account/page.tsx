@@ -89,17 +89,17 @@ export default function AccountPage() {
     setError('');
   }
   const input =
-    'mt-2 w-full border border-[#3e5686] bg-[#050816] p-3 text-base';
+    'mt-2 w-full border border-[#525252] bg-[#090909] p-3 text-base';
   return (
-    <main className="min-h-screen bg-[#050816] px-5 py-12 text-[#edf2ff]">
-      <div className="mx-auto max-w-md border-2 border-[#2f426b] bg-[#0c1224] p-6 sm:p-8">
-        <Link className="font-black text-[#4da3ff]" href="/">
+    <main className="min-h-screen bg-[#090909] px-5 py-12 text-[#f2f2f2]">
+      <div className="mx-auto max-w-md border-2 border-[#3f3f3f] bg-[#121212] p-6 sm:p-8">
+        <Link className="font-black text-[#f5f5f5]" href="/">
           CRASHLENS
         </Link>
         <h1 className="mt-8 text-3xl font-bold">{titles[mode]}</h1>
         {signedIn && (
           <button
-            className="mt-4 border border-[#2f426b] p-3 text-sm"
+            className="mt-4 border border-[#3f3f3f] p-3 text-sm"
             onClick={async () => {
               const r = await fetch('/api/account', {
                 method: 'POST',
@@ -117,7 +117,7 @@ export default function AccountPage() {
             Sign out of CrashLens account
           </button>
         )}
-        <p className="mt-3 text-base text-[#9aa9c7]">
+        <p className="mt-3 text-base text-[#adadad]">
           {mode === 'signup'
             ? 'Create an account and sign in immediately. No email verification required.'
             : 'Your incidents, monitors, and account notifications.'}
@@ -170,7 +170,7 @@ export default function AccountPage() {
                 className={input}
               />
               {mode !== 'login' && (
-                <span className="mt-2 block text-sm text-[#9aa9c7]">
+                <span className="mt-2 block text-sm text-[#adadad]">
                   Use at least 12 characters.
                 </span>
               )}
@@ -191,13 +191,13 @@ export default function AccountPage() {
             </p>
           )}
           {message && (
-            <output className="block border border-[#4da3ff] p-3 text-sm">
+            <output className="block border border-[#f5f5f5] p-3 text-sm">
               {message}
             </output>
           )}
           <button
             disabled={busy}
-            className="w-full bg-[#4da3ff] p-3 font-bold text-black disabled:opacity-50"
+            className="w-full bg-[#f5f5f5] p-3 font-bold text-black disabled:opacity-50"
           >
             {busy
               ? 'Please wait…'
@@ -212,7 +212,7 @@ export default function AccountPage() {
                       : 'Send email link'}
           </button>
         </form>
-        <nav className="mt-6 flex flex-wrap gap-4 text-sm text-[#22d3ee]">
+        <nav className="mt-6 flex flex-wrap gap-4 text-sm text-[#d4d4d4]">
           {mode !== 'login' && (
             <button onClick={() => change('login')}>Sign in</button>
           )}
@@ -228,7 +228,7 @@ export default function AccountPage() {
         <a
           href="/signin-with-chatgpt?return_to=/"
           target="_top"
-          className="mt-6 block border-t border-[#2f426b] pt-4 text-sm text-[#9aa9c7]"
+          className="mt-6 block border-t border-[#3f3f3f] pt-4 text-sm text-[#adadad]"
         >
           Continue with existing ChatGPT access
         </a>
