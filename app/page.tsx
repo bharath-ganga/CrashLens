@@ -35,6 +35,7 @@ import {
   MoreHorizontal,
   Plug,
   Radio,
+  ScanSearch,
   Search,
   Send,
   Server,
@@ -57,6 +58,7 @@ import {
 } from 'recharts';
 import UptimePanel from './uptime-panel';
 import AdminClientsPanel from './admin-clients-panel';
+import ProductionIntelligencePanel from './production-intelligence-panel';
 import Link from 'next/link';
 import {
   analyzeLogs,
@@ -89,6 +91,7 @@ type WorkspaceView =
   | 'logs'
   | 'services'
   | 'deployments'
+  | 'intelligence'
   | 'history'
   | 'team'
   | 'integrations'
@@ -520,6 +523,7 @@ export default function Home() {
                 ['logs', FileCode2, 'Logs'],
                 ['services', Boxes, 'Services'],
                 ['deployments', GitCommitHorizontal, 'Deployments'],
+                ['intelligence', ScanSearch, 'Intelligence'],
                 ['monitoring', HeartPulse, 'Monitoring'],
                 ['integrations', Plug, 'Integrations'],
                 ['settings', Settings, 'Settings'],
@@ -1218,6 +1222,8 @@ export default function Home() {
                   )}
                 </section>
               </>
+            ) : view === 'intelligence' ? (
+              <ProductionIntelligencePanel />
             ) : [
                 'overview',
                 'logs',
@@ -1672,6 +1678,11 @@ function OperationsConsole({
     ['cloudwatch', 'CloudWatch', 'AWS log subscription destination'],
     ['sentry', 'Sentry', 'Issue webhook and event correlation'],
     ['datadog', 'Datadog', 'Monitor and log webhook intake'],
+    [
+      'opentelemetry',
+      'OpenTelemetry',
+      'Distributed request traces through the OTLP JSON endpoint',
+    ],
     ['webhook', 'Generic webhook', 'Token-protected JSON log endpoint'],
     ['slack', 'Slack alerts', 'Incident notifications through webhook'],
     ['email', 'Email alerts', 'Provider-ready notification channel'],

@@ -206,6 +206,7 @@ export async function POST(request: Request) {
       'cloudwatch',
       'sentry',
       'datadog',
+      'opentelemetry',
       'webhook',
       'slack',
       'email',

@@ -18,6 +18,7 @@ export type CrashLensEnv = Cloudflare.Env & {
   ALERT_WEBHOOK_URL?: string;
   ALERT_WEBHOOK_SECRET?: string;
   ADMIN_EMAILS?: string;
+  INGESTION_TEAM_ID?: string;
 };
 
 export function getRuntimeEnv(): CrashLensEnv {

@@ -12,6 +12,7 @@ CrashLens is a production incident investigation and uptime-monitoring platform.
 - Automatic outage incidents after three failures, recovery detection, acknowledge/resolve actions, and incident filters.
 - Email, Slack, PagerDuty, and HMAC-SHA256 signed webhook lifecycle notifications.
 - SSRF defenses: HTTPS-only destinations, blocked credentials/query strings/private addresses, DNS checks, no redirects, header restrictions, response-size limits, and database leases.
+- OpenTelemetry-compatible request traces, error-spike detection, deployment correlation, service-level objectives (SLOs), error budgets, and downloadable postmortems.
 
 ## Architecture
 
@@ -62,13 +63,28 @@ The current Sites deployment is owner-private: the platform access gate is separ
 
 Sites' existing access gate also remains in front of the new account page. Separate accounts do not automatically make the site public.
 
+## Production intelligence
+
+Open **Intelligence** and select **Load sample signals** for a complete demonstration. CrashLens shows one checkout request moving through the gateway, checkout service, payment service, and database call. The failing span is highlighted, a recent deployment is shown as a possible trigger, the error rate is compared with the previous 15-minute period, and service reliability is compared with a 99.9% target. **Generate report** saves and downloads a Markdown postmortem. Deployment correlation is evidence, not proof; an engineer must confirm the root cause.
+
+For real application data, configure `INGESTION_TOKEN` and `INGESTION_TEAM_ID`, then send OpenTelemetry Protocol JSON or the simpler `spans` JSON format to `POST /api/telemetry` with `X-CrashLens-Ingest-Token`. Send CI/CD releases to `POST /api/deployments` with `service`, `version`, and optional `environment`, `status`, `actor`, `source`, and ISO `deployedAt`. A ready-to-send trace example is available at `/samples/crashlens-otel.json`. `INGESTION_TEAM_ID` must match the team id returned by the authenticated `/api/workspace` response, otherwise machine data will not appear in that workspace.
+
+```bash
+curl -X POST https://your-crashlens-host/api/telemetry \
+  -H "Content-Type: application/json" \
+  -H "X-CrashLens-Ingest-Token: YOUR_TOKEN" \
+  --data-binary @public/samples/crashlens-otel.json
+```
+
+The endpoint accepts up to 5,000 spans per request and stores service, operation, status, timestamps, duration, environment, trace relationships, and bounded attributes in D1. Keep the token server-side and rotate it if exposed.
+
 ### Regional monitoring status
 
 The repository records the check region and exposes the evidence in the dashboard. The bundled runner performs checks from its own `origin` region. True US/EU/APAC consensus requires deploying runners in those regions and securely coordinating their results; the UI does not claim those agents exist until they are actually deployed.
 
 ## Database migrations
 
-Schema changes live in `drizzle/`. Migration `0004_uptime_control.sql` adds monitor projects, advanced HTTP configuration, regions, and evidence. Run `node scripts/migrate-local.mjs` after pulling changes. Sites applies committed migrations when publishing.
+Schema changes live in `drizzle/`. Migration `0004_uptime_control.sql` adds monitor projects, advanced HTTP configuration, regions, and evidence. Migration `0005_production_intelligence.sql` adds traces, deployments, SLOs, and postmortems. Run `node scripts/migrate-local.mjs` after pulling changes. Sites applies committed migrations when publishing.
 
 ## Platform client administration
 

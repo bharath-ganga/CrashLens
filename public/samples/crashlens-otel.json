@@ -1,0 +1,29 @@
+{
+  "spans": [
+    {
+      "spanId": "span-gateway-01",
+      "traceId": "trace-checkout-42",
+      "service": "api-gateway",
+      "operation": "POST /checkout",
+      "status": "ok",
+      "startedAt": "2026-09-14T14:32:00.000Z",
+      "durationMs": 804,
+      "environment": "production"
+    },
+    {
+      "spanId": "span-payment-01",
+      "traceId": "trace-checkout-42",
+      "parentSpanId": "span-gateway-01",
+      "service": "payment-service",
+      "operation": "charge-card",
+      "status": "error",
+      "startedAt": "2026-09-14T14:32:00.120Z",
+      "durationMs": 681,
+      "environment": "production",
+      "attributes": {
+        "error.type": "DatabaseTimeout",
+        "http.route": "/checkout"
+      }
+    }
+  ]
+}
