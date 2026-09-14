@@ -74,7 +74,7 @@ export default function AdminClientsPanel() {
 
   if (loading && !data) {
     return (
-      <section className="border border-[#383838] bg-[#161616] p-8 text-sm text-[#adadad]">
+      <section className="border border-[#232936] bg-[#11151D] p-8 text-sm text-[#8B95A7]">
         Loading client accounts…
       </section>
     );
@@ -82,29 +82,29 @@ export default function AdminClientsPanel() {
 
   if (error && !data) {
     return (
-      <section className="border border-[#a53d3d] bg-[#200d0f] p-5 text-sm text-[#ff8585]">
+      <section className="border border-[#a53d3d] bg-[#200d0f] p-5 text-sm text-[#FF6B79]">
         {error}
       </section>
     );
   }
 
   return (
-    <section className="border border-[#383838] bg-[#121212]">
-      <header className="border-b border-[#383838] p-5 lg:p-6">
+    <section className="border border-[#232936] bg-[#11151D]">
+      <header className="border-b border-[#232936] p-5 lg:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-sm text-[#adadad]">
+            <div className="flex items-center gap-2 text-sm text-[#8B95A7]">
               <Shield size={16} /> Platform administration
             </div>
             <h2 className="mt-2 text-2xl font-semibold text-white">
               Client accounts
             </h2>
-            <p className="mt-1 text-sm text-[#adadad]">
+            <p className="mt-1 text-sm text-[#8B95A7]">
               Registered CrashLens accounts and their database activity.
             </p>
           </div>
           <button
-            className="flex h-10 items-center gap-2 border border-[#525252] px-4 text-sm text-[#e5e5e5] hover:border-white"
+            className="flex h-10 items-center gap-2 border border-[#353D4D] px-4 text-sm text-[#D9DEEA] hover:border-white"
             onClick={() => void load()}
             disabled={loading}
           >
@@ -112,7 +112,7 @@ export default function AdminClientsPanel() {
             Refresh
           </button>
         </div>
-        <div className="mt-6 grid gap-px border border-[#383838] bg-[#383838] sm:grid-cols-3">
+        <div className="mt-6 grid gap-px border border-[#232936] bg-[#232936] sm:grid-cols-3">
           <Summary label="Total accounts" value={data?.totals.total ?? 0} />
           <Summary label="Verified emails" value={data?.totals.verified ?? 0} />
           <Summary
@@ -122,14 +122,14 @@ export default function AdminClientsPanel() {
         </div>
       </header>
 
-      <div className="border-b border-[#383838] p-4">
-        <label className="flex max-w-md items-center gap-3 border border-[#525252] bg-[#0d0d0d] px-3 focus-within:border-white">
-          <Search size={16} className="text-[#8f8f8f]" />
+      <div className="border-b border-[#232936] p-4">
+        <label className="flex max-w-md items-center gap-3 border border-[#353D4D] bg-[#0D1017] px-3 focus-within:border-white">
+          <Search size={16} className="text-[#8B95A7]" />
           <input
             aria-label="Search client accounts"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            className="h-11 min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-[#737373]"
+            className="h-11 min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-[#626C7D]"
             placeholder="Search name, email, or workspace"
           />
         </label>
@@ -137,7 +137,7 @@ export default function AdminClientsPanel() {
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[980px] text-left text-sm">
-          <thead className="border-b border-[#383838] bg-[#0d0d0d] text-xs text-[#999999]">
+          <thead className="border-b border-[#232936] bg-[#0D1017] text-xs text-[#8B95A7]">
             <tr>
               <th className="px-4 py-3 font-medium">Client</th>
               <th className="px-4 py-3 font-medium">Status</th>
@@ -150,28 +150,28 @@ export default function AdminClientsPanel() {
             {clients.map((client) => (
               <tr
                 key={client.id}
-                className="border-b border-[#303030] hover:bg-[#191919]"
+                className="border-b border-[#202633] hover:bg-[#191919]"
               >
                 <td
                   className="px-4 py-4"
                   aria-label={`Client ${client.name || client.email}`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="grid size-9 shrink-0 place-items-center border border-[#525252] bg-[#1a1a1a] text-xs font-semibold text-white">
+                    <span className="grid size-9 shrink-0 place-items-center border border-[#353D4D] bg-[#171C26] text-xs font-semibold text-white">
                       {(client.name || client.email).slice(0, 2).toUpperCase()}
                     </span>
                     <span>
                       <strong className="block font-medium text-white">
                         {client.name}
                       </strong>
-                      <span className="mt-0.5 block text-xs text-[#999999]">
+                      <span className="mt-0.5 block text-xs text-[#8B95A7]">
                         {client.email}
                       </span>
                     </span>
                   </div>
                 </td>
                 <td className="px-4 py-4">
-                  <span className="inline-flex items-center gap-1.5 border border-[#525252] px-2 py-1 text-xs text-[#d6d6d6]">
+                  <span className="inline-flex items-center gap-1.5 border border-[#353D4D] px-2 py-1 text-xs text-[#D9DEEA]">
                     {client.verified ? (
                       <Check size={12} />
                     ) : (
@@ -179,27 +179,27 @@ export default function AdminClientsPanel() {
                     )}
                     {client.verified ? 'Email verified' : 'Unverified'}
                   </span>
-                  <span className="mt-2 block text-xs text-[#8f8f8f]">
+                  <span className="mt-2 block text-xs text-[#8B95A7]">
                     {Number(client.active_sessions)} active session
                     {Number(client.active_sessions) === 1 ? '' : 's'}
                   </span>
                 </td>
-                <td className="px-4 py-4 text-[#d6d6d6]">
+                <td className="px-4 py-4 text-[#D9DEEA]">
                   {client.workspace_name ?? 'Workspace not created'}
                 </td>
-                <td className="px-4 py-4 text-[#d6d6d6]">
+                <td className="px-4 py-4 text-[#D9DEEA]">
                   <span className="block">
                     {Number(client.incident_count)} incidents
                   </span>
-                  <span className="mt-1 block text-xs text-[#8f8f8f]">
+                  <span className="mt-1 block text-xs text-[#8B95A7]">
                     {Number(client.ingestion_count)} log uploads
                   </span>
                 </td>
-                <td className="px-4 py-4 text-[#e5e5e5]">
+                <td className="px-4 py-4 text-[#D9DEEA]">
                   <time dateTime={asUtc(client.created_at).toISOString()}>
                     {createdDate(client.created_at)}
                   </time>
-                  <span className="mt-1 block text-xs text-[#8f8f8f]">
+                  <span className="mt-1 block text-xs text-[#8B95A7]">
                     {asUtc(client.created_at)
                       .toISOString()
                       .replace('T', ' ')
@@ -211,14 +211,14 @@ export default function AdminClientsPanel() {
           </tbody>
         </table>
         {!clients.length && (
-          <p className="p-10 text-center text-sm text-[#8f8f8f]">
+          <p className="p-10 text-center text-sm text-[#8B95A7]">
             {query
               ? 'No accounts match this search.'
               : 'No client accounts have been created.'}
           </p>
         )}
       </div>
-      <footer className="flex flex-wrap justify-between gap-2 p-4 text-xs text-[#737373]">
+      <footer className="flex flex-wrap justify-between gap-2 p-4 text-xs text-[#626C7D]">
         <span>
           Showing {clients.length} of {data?.totals.total ?? 0} accounts
         </span>
@@ -232,8 +232,8 @@ export default function AdminClientsPanel() {
 
 function Summary({ label, value }: { label: string; value: number }) {
   return (
-    <div className="bg-[#161616] p-4">
-      <p className="text-xs text-[#8f8f8f]">{label}</p>
+    <div className="bg-[#11151D] p-4">
+      <p className="text-xs text-[#8B95A7]">{label}</p>
       <p className="mt-1 text-2xl font-semibold text-white">{value}</p>
     </div>
   );
