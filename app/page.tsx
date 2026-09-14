@@ -20,8 +20,6 @@ import {
   ChevronRight,
   CircleCheck,
   Clipboard,
-  Clock3,
-  Crosshair,
   Database,
   Download,
   FileCode2,
@@ -34,6 +32,7 @@ import {
   History,
   LoaderCircle,
   Menu,
+  MoreHorizontal,
   Plug,
   Radio,
   Search,
@@ -45,9 +44,17 @@ import {
   Upload,
   Users,
   X,
-  Zap,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import UptimePanel from './uptime-panel';
 import AdminClientsPanel from './admin-clients-panel';
 import Link from 'next/link';
@@ -111,6 +118,21 @@ function dateTime(timestamp: string) {
   });
 }
 
+function rootCauseFor(incident: Incident) {
+  const trigger = incident.trigger.toLowerCase();
+  if (trigger.includes('database connection timeout'))
+    return `Database connection timeout in ${incident.service}`;
+  if (trigger.includes('outofmemory') || trigger.includes('memory'))
+    return `Memory exhaustion in ${incident.service}`;
+  if (trigger.includes('redis failover'))
+    return `Redis failover affecting ${incident.service}`;
+  if (trigger.includes('deploy') || trigger.includes('version'))
+    return `Recent deployment affecting ${incident.service}`;
+  if (incident.trigger === 'No correlated change found')
+    return `Recurring ${incident.title.toLowerCase()} in ${incident.service}`;
+  return `${incident.trigger.replace(/[_ ](?:order|user|job)_id=.*/i, '').replace(/[.:]+$/, '')} in ${incident.service}`;
+}
+
 function downloadText(content: string, filename: string) {
   const url = URL.createObjectURL(
     new Blob([content], { type: 'text/plain;charset=utf-8' }),
@@ -154,6 +176,7 @@ export default function Home() {
   const [environment, setEnvironment] = useState('Production');
   const [dateRange, setDateRange] = useState('Last 24h');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const selected =
     incidents.find((incident) => incident.id === selectedId) ?? incidents[0];
@@ -176,11 +199,6 @@ export default function Home() {
   const errorCount = logs.filter(
     (log) => log.level === 'error' || log.level === 'fatal',
   ).length;
-  const dataQuality = Math.round(
-    (logs.filter((log) => log.service !== 'unknown-service').length /
-      Math.max(1, logs.length)) *
-      100,
-  );
   const signalBars = useMemo(() => {
     const buckets = new Map<string, number>();
     logs.forEach((log) => {
@@ -188,11 +206,14 @@ export default function Home() {
       buckets.set(key, (buckets.get(key) ?? 0) + 1);
     });
     const values = [...buckets.entries()].slice(-18);
-    const maximum = Math.max(1, ...values.map(([, count]) => count));
     return values.map(([label, count]) => ({
       label,
       count,
-      height: Math.max(12, Math.round((count / maximum) * 100)),
+      critical: logs.filter(
+        (log) =>
+          log.timestamp.slice(11, 16) === label &&
+          (log.level === 'fatal' || log.level === 'error'),
+      ).length,
     }));
   }, [logs]);
   const metrics: Array<{
@@ -202,30 +223,30 @@ export default function Home() {
     icon: LucideIcon;
   }> = [
     {
-      label: 'INCIDENTS',
-      value: incidents.length,
-      note: `${incidents.filter((item) => item.severity === 'critical').length} critical`,
+      label: 'Open incidents',
+      value: incidents.length - resolved.length,
+      note: `${resolved.length} resolved`,
       icon: AlertTriangle,
     },
     {
-      label: 'LOGS PARSED',
-      value: logs.length,
-      note: `${errorCount} errors`,
+      label: 'Critical',
+      value: incidents.filter(
+        (item) => item.severity === 'critical' && !resolved.includes(item.id),
+      ).length,
+      note: 'need investigation',
+      icon: Activity,
+    },
+    {
+      label: 'Error events',
+      value: errorCount,
+      note: `${logs.length} total events`,
       icon: FileCode2,
     },
     {
-      label: 'SERVICES',
+      label: 'Services',
       value: serviceCount,
       note: 'detected automatically',
       icon: Server,
-    },
-    {
-      label: 'TIME WINDOW',
-      value: logs.length
-        ? `${Math.max(1, Math.round((Date.parse(logs.at(-1)!.timestamp) - Date.parse(logs[0].timestamp)) / 60000))}m`
-        : '0m',
-      note: 'UTC normalized',
-      icon: Clock3,
     },
   ];
   const sampleFiles: Array<{
@@ -536,7 +557,7 @@ export default function Home() {
                   setUploadOpen(true);
                   setMobileNavOpen(false);
                 }}
-                className="mt-3 flex h-10 w-full items-center gap-3 rounded-lg bg-[#7C6CFF] px-3 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(124,108,255,.18)] hover:bg-[#8A7BFF]"
+                className="mt-3 flex h-10 w-full items-center gap-3 rounded-lg border border-[#2D3442] bg-transparent px-3 text-sm font-medium text-[#B5BECD] hover:bg-[#171C26] hover:text-white"
               >
                 <Database size={15} />
                 Upload source
@@ -640,9 +661,6 @@ export default function Home() {
                       {filter}
                     </button>
                   ))}
-                  <span className="ml-auto text-xs text-[#626C7D]">
-                    {environment} · {dateRange}
-                  </span>
                 </div>
                 <section className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
                   {metrics.map(({ label, value, note, icon: Icon }) => (
@@ -662,55 +680,102 @@ export default function Home() {
                   ))}
                 </section>
 
-                <section className="mb-5 grid overflow-hidden rounded-xl border border-[#232936] bg-[#11151D] shadow-[0_10px_30px_rgba(0,0,0,.12)] lg:grid-cols-[1fr_300px]">
-                  <div className="border-b border-[#232936] p-4 lg:border-b-0 lg:border-r">
-                    <div className="mb-4 flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm font-medium text-[#D9DEEA]">
-                        <Radio size={13} className="text-[#9D91FF]" /> Incident
-                        activity
-                      </div>
-                      <div className="text-xs text-[#626C7D]">
-                        {signalBars.length} time buckets
-                      </div>
+                <section className="mb-5 overflow-hidden rounded-xl border border-[#232936] bg-[#11151D] p-4 shadow-[0_10px_30px_rgba(0,0,0,.12)]">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm font-medium text-[#D9DEEA]">
+                      <Radio size={13} className="text-[#9D91FF]" /> Incident
+                      activity
                     </div>
-                    <div className="flex h-20 items-end gap-1 border-b border-[#232936]">
-                      {signalBars.map((bar, index) => (
-                        <div
-                          key={`${bar.label}-${index}`}
-                          className="group relative flex h-full min-w-2 flex-1 items-end"
-                          title={`${bar.label} · ${bar.count} events`}
-                        >
-                          <span
-                            className={`block w-full rounded-t-sm ${bar.count >= 3 ? 'bg-[#FF4D5E]' : index === signalBars.length - 1 ? 'bg-[#7C6CFF]' : 'bg-[#353D4D]'}`}
-                            style={{ height: `${bar.height}%` }}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-2 flex justify-between text-xs text-[#626C7D]">
-                      <span>{signalBars[0]?.label ?? '--:--'} UTC</span>
-                      <span>{signalBars.at(-1)?.label ?? '--:--'} UTC</span>
+                    <div className="flex items-center gap-4 text-xs text-[#626C7D]">
+                      <span className="flex items-center gap-1.5">
+                        <span className="size-2 rounded-full bg-[#7C6CFF]" />
+                        All events
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="size-2 rounded-full bg-[#FF4D5E]" />
+                        Critical
+                      </span>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 lg:grid-cols-1">
-                    <div className="border-r border-[#232936] p-4 lg:border-b lg:border-r-0">
-                      <p className="text-xs text-[#8B95A7]">DATA QUALITY</p>
-                      <div className="mt-2 flex items-end justify-between">
-                        <strong className="text-2xl text-[#9D91FF]">
-                          {dataQuality}%
-                        </strong>
-                        <span className="text-xs text-[#8B95A7]">
-                          SCHEMA MATCH
-                        </span>
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <p className="text-xs text-[#8B95A7]">PRIVACY MODE</p>
-                      <div className="mt-2 flex items-center gap-2 text-sm text-[#7C6CFF]">
-                        <ShieldCheck size={14} />
-                        Redaction enabled
-                      </div>
-                    </div>
+                  <div className="h-[190px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart
+                        data={signalBars}
+                        margin={{ top: 8, right: 8, left: -28, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient
+                            id="activityFill"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor="#7C6CFF"
+                              stopOpacity={0.34}
+                            />
+                            <stop
+                              offset="100%"
+                              stopColor="#7C6CFF"
+                              stopOpacity={0.02}
+                            />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid
+                          vertical={false}
+                          stroke="#232936"
+                          strokeDasharray="3 5"
+                        />
+                        <XAxis
+                          dataKey="label"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fill: '#626C7D', fontSize: 11 }}
+                          interval="preserveStartEnd"
+                        />
+                        <YAxis
+                          allowDecimals={false}
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fill: '#626C7D', fontSize: 11 }}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            background: '#0D1017',
+                            border: '1px solid #2D3442',
+                            borderRadius: 8,
+                            color: '#F4F7FB',
+                            fontSize: 12,
+                          }}
+                          labelFormatter={(label) => `${label} UTC`}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="count"
+                          name="All events"
+                          stroke="#7C6CFF"
+                          strokeWidth={2.5}
+                          fill="url(#activityFill)"
+                          activeDot={{
+                            r: 5,
+                            fill: '#9D91FF',
+                            stroke: '#0D1017',
+                            strokeWidth: 2,
+                          }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="critical"
+                          name="Critical"
+                          stroke="#FF4D5E"
+                          strokeWidth={2}
+                          fill="transparent"
+                          dot={{ r: 3, fill: '#FF4D5E', strokeWidth: 0 }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
                 </section>
 
@@ -824,31 +889,12 @@ export default function Home() {
                               UTC
                             </p>
                           </div>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <button
-                              onClick={() => {
-                                void navigator.clipboard.writeText(
-                                  selected.fingerprint,
-                                );
-                                setCopied(true);
-                                window.setTimeout(() => setCopied(false), 1600);
-                              }}
-                              className="flex h-8 items-center gap-2 border border-[#2D3442] bg-[#171C26] px-3 text-xs text-[#D9DEEA] hover:text-white"
+                              onClick={() => setTab('logs')}
+                              className="h-9 rounded-lg border border-[#2D3442] bg-[#171C26] px-3 text-xs font-medium text-[#D9DEEA] hover:bg-[#202633]"
                             >
-                              <Clipboard size={12} />
-                              {copied ? 'COPIED' : 'FINGERPRINT'}
-                            </button>
-                            <button
-                              onClick={() =>
-                                downloadText(
-                                  buildReport(selected, filename),
-                                  `incident-${selected.id}-report.txt`,
-                                )
-                              }
-                              className="flex h-8 items-center gap-2 border border-[#2D3442] bg-[#171C26] px-3 text-xs text-[#D9DEEA] hover:text-white"
-                            >
-                              <ArrowDownToLine size={12} />
-                              EXPORT
+                              View logs
                             </button>
                             <button
                               onClick={() =>
@@ -858,52 +904,76 @@ export default function Home() {
                                     : [...items, selected.id],
                                 )
                               }
-                              className="h-8 border border-[#7C6CFF] px-3 text-xs font-bold text-[#7C6CFF] hover:bg-[#7C6CFF] hover:text-black"
+                              className="h-9 rounded-lg bg-[#7C6CFF] px-3 text-xs font-semibold text-white hover:bg-[#8A7BFF]"
                             >
                               {resolved.includes(selected.id)
-                                ? 'REOPEN'
-                                : 'RESOLVE'}
+                                ? 'Reopen'
+                                : 'Resolve'}
                             </button>
+                            <div className="relative">
+                              <button
+                                aria-label="More incident actions"
+                                onClick={() => setMoreOpen((open) => !open)}
+                                className="grid size-9 place-items-center rounded-lg border border-[#2D3442] bg-[#171C26] text-[#8B95A7] hover:text-white"
+                              >
+                                <MoreHorizontal size={17} />
+                              </button>
+                              {moreOpen && (
+                                <div className="absolute right-0 top-11 z-20 w-44 rounded-lg border border-[#2D3442] bg-[#11151D] p-1.5 shadow-2xl">
+                                  <button
+                                    onClick={() => {
+                                      void navigator.clipboard.writeText(
+                                        selected.fingerprint,
+                                      );
+                                      setCopied(true);
+                                      setMoreOpen(false);
+                                      window.setTimeout(
+                                        () => setCopied(false),
+                                        1600,
+                                      );
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs text-[#D9DEEA] hover:bg-[#171C26]"
+                                  >
+                                    <Clipboard size={13} />
+                                    {copied ? 'Copied' : 'Copy fingerprint'}
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      downloadText(
+                                        buildReport(selected, filename),
+                                        `incident-${selected.id}-report.txt`,
+                                      );
+                                      setMoreOpen(false);
+                                    }}
+                                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs text-[#D9DEEA] hover:bg-[#171C26]"
+                                  >
+                                    <ArrowDownToLine size={13} />
+                                    Export report
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      <div className="grid border-b border-[#232936] md:grid-cols-[minmax(0,1fr)_180px]">
-                        <div className="border-b border-[#232936] bg-[#171C26] p-4 md:border-b-0 md:border-r lg:p-5">
-                          <div className="flex items-center gap-2 text-xs text-[#7C6CFF]">
-                            <Sparkles size={13} />
-                            CORRELATION RESULT
+                      <div className="border-b border-[#232936] bg-[#171C26] p-5">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-2 text-xs font-medium text-[#9D91FF]">
+                            <Sparkles size={14} /> Likely root cause
                           </div>
-                          <p className="mt-3 text-sm font-medium text-white">
-                            Likely trigger: {selected.trigger}
-                          </p>
-                          <p className="mt-1 text-sm leading-relaxed text-[#a0a0a0]">
-                            The earliest matching failures appeared in{' '}
-                            <span className="text-[#D9DEEA]">
-                              {selected.service}
-                            </span>
-                            . CrashLens linked events using service identity,
-                            normalized error text, timestamps, and nearby
-                            deployment signals.
-                          </p>
+                          <span className="shrink-0 rounded-full bg-[#7C6CFF]/12 px-2.5 py-1 text-xs font-semibold text-[#9D91FF]">
+                            {selected.confidence}% confidence
+                          </span>
                         </div>
-                        <div className="flex items-center justify-between bg-[#171C26] p-4 md:block lg:p-5">
-                          <div>
-                            <p className="text-xs text-[#8B95A7]">CONFIDENCE</p>
-                            <p className="mt-2 text-3xl font-semibold text-[#7C6CFF]">
-                              {selected.confidence}%
-                            </p>
-                          </div>
-                          <div className="mt-3 h-1.5 w-full bg-[#232936]">
-                            <div
-                              className="h-full bg-[#7C6CFF]"
-                              style={{ width: `${selected.confidence}%` }}
-                            />
-                          </div>
-                          <p className="mt-2 text-xs text-[#626C7D]">
-                            FINGERPRINT MATCH
-                          </p>
-                        </div>
+                        <p className="mt-3 text-lg font-semibold leading-snug text-white">
+                          {rootCauseFor(selected)}
+                        </p>
+                        <p className="mt-2 text-sm leading-relaxed text-[#8B95A7]">
+                          CrashLens correlated service identity, event order,
+                          normalized fingerprints and nearby operational
+                          changes.
+                        </p>
                       </div>
 
                       <div className="flex h-11 border-b border-[#232936] bg-[#11151D] px-4">
@@ -911,7 +981,7 @@ export default function Home() {
                           onClick={() => setTab('analysis')}
                           className={`mr-6 border-b-2 px-1 text-xs font-bold ${tab === 'analysis' ? 'border-[#7C6CFF] text-[#7C6CFF]' : 'border-transparent text-[#8B95A7]'}`}
                         >
-                          AI ANALYSIS
+                          AI INVESTIGATION
                         </button>
                         <button
                           onClick={() => setTab('timeline')}
@@ -932,66 +1002,142 @@ export default function Home() {
                         id="raw-logs"
                       >
                         {tab === 'analysis' ? (
-                          <div className="grid gap-3 md:grid-cols-3">
-                            <div className="border border-[#232936] bg-[#171C26] p-4">
-                              <div className="mb-3 flex items-center gap-2 text-xs text-[#9D91FF]">
-                                <Crosshair size={12} />
-                                01 / ORIGIN
+                          <div className="space-y-5">
+                            <div className="grid gap-5 md:grid-cols-[1.05fr_.95fr]">
+                              <div>
+                                <div className="flex items-center justify-between">
+                                  <h3 className="text-sm font-semibold text-white">
+                                    Evidence
+                                  </h3>
+                                  <span className="text-xs text-[#626C7D]">
+                                    {selected.logs.length} correlated events
+                                  </span>
+                                </div>
+                                <div className="mt-3 space-y-2.5 text-sm text-[#B5BECD]">
+                                  <p className="flex gap-2">
+                                    <CircleCheck
+                                      size={15}
+                                      className="mt-0.5 shrink-0 text-[#35D07F]"
+                                    />
+                                    <span>
+                                      <strong className="font-medium text-white">
+                                        {selected.service}
+                                      </strong>{' '}
+                                      produced the first matching error at{' '}
+                                      {time(selected.started)} UTC.
+                                    </span>
+                                  </p>
+                                  <p className="flex gap-2">
+                                    <CircleCheck
+                                      size={15}
+                                      className="mt-0.5 shrink-0 text-[#35D07F]"
+                                    />
+                                    <span>
+                                      {selected.logs.length} events share the
+                                      normalized{' '}
+                                      <strong className="font-medium text-white">
+                                        {selected.fingerprint}
+                                      </strong>{' '}
+                                      fingerprint.
+                                    </span>
+                                  </p>
+                                  <p className="flex gap-2">
+                                    <CircleCheck
+                                      size={15}
+                                      className="mt-0.5 shrink-0 text-[#35D07F]"
+                                    />
+                                    <span>
+                                      {selected.timeline.some(
+                                        (event) => event.type === 'deploy',
+                                      )
+                                        ? 'A deployment signal was detected near the first failure.'
+                                        : 'Event timestamps cluster inside the same operational window.'}
+                                    </span>
+                                  </p>
+                                </div>
                               </div>
-                              <p className="text-sm leading-relaxed text-[#D9DEEA]">
-                                First failures originated in{' '}
-                                <strong className="font-medium text-white">
-                                  {selected.service}
-                                </strong>{' '}
-                                at {time(selected.started)} UTC.
-                              </p>
-                            </div>
-                            <div className="border border-[#232936] bg-[#171C26] p-4">
-                              <div className="mb-3 flex items-center gap-2 text-xs text-[#FF9F43]">
-                                <Zap size={12} />
-                                02 / TRIGGER
+                              <div className="rounded-lg border border-[#2D3442] bg-[#0D1017] p-4">
+                                <p className="text-xs font-medium text-[#9D91FF]">
+                                  Recommended action
+                                </p>
+                                <p className="mt-2 text-sm leading-relaxed text-[#D9DEEA]">
+                                  Inspect the {selected.service} dependencies
+                                  and recent deployment. Check its connection
+                                  pool, then roll back if the error rate
+                                  continues rising.
+                                </p>
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                  <button
+                                    onClick={() => setTab('logs')}
+                                    className="rounded-lg bg-[#7C6CFF] px-3 py-2 text-xs font-semibold text-white"
+                                  >
+                                    View related logs
+                                  </button>
+                                  <button
+                                    onClick={() => setView('deployments')}
+                                    className="rounded-lg border border-[#2D3442] px-3 py-2 text-xs text-[#D9DEEA]"
+                                  >
+                                    View deployment
+                                  </button>
+                                </div>
                               </div>
-                              <p className="text-sm leading-relaxed text-[#D9DEEA]">
-                                Nearest correlated operational change:{' '}
-                                <strong className="font-medium text-white">
-                                  {selected.trigger}
-                                </strong>
-                                .
-                              </p>
                             </div>
-                            <div className="border border-[#232936] bg-[#171C26] p-4">
-                              <div className="mb-3 flex items-center gap-2 text-xs text-[#7C6CFF]">
-                                <CircleCheck size={12} />
-                                03 / NEXT ACTION
+                            <div className="border-t border-[#232936] pt-5">
+                              <div className="mb-3">
+                                <h3 className="text-sm font-semibold text-white">
+                                  Causal chain
+                                </h3>
+                                <p className="mt-1 text-xs text-[#626C7D]">
+                                  How the signal became a production incident
+                                </p>
                               </div>
-                              <p className="text-sm leading-relaxed text-[#D9DEEA]">
-                                Check the deployment diff and service
-                                dependencies, then rollback if the error rate
-                                continues rising.
-                              </p>
-                            </div>
-                            <div className="border border-[#232936] bg-[#0D1017] p-4 md:col-span-3">
-                              <p className="text-xs text-[#8B95A7]">
-                                CAUSAL CHAIN
-                              </p>
-                              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                                <span className="border border-[#757575] px-2 py-1.5 text-[#D9DEEA]">
-                                  {selected.trigger}
-                                </span>
+                              <div className="grid items-stretch gap-2 md:grid-cols-[1fr_auto_1fr_auto_1fr]">
+                                <div className="rounded-lg border border-[#7C6CFF]/55 bg-[#7C6CFF]/8 p-3">
+                                  <p className="text-[11px] font-medium uppercase tracking-[.08em] text-[#9D91FF]">
+                                    Root signal
+                                  </p>
+                                  <p className="mt-2 text-sm font-medium text-white">
+                                    {rootCauseFor(selected).replace(
+                                      ` in ${selected.service}`,
+                                      '',
+                                    )}
+                                  </p>
+                                  <p className="mt-1 text-xs text-[#8B95A7]">
+                                    {selected.service} ·{' '}
+                                    {time(selected.started)}
+                                  </p>
+                                </div>
                                 <ChevronRight
-                                  size={12}
-                                  className="text-[#626C7D]"
+                                  size={18}
+                                  className="mx-auto self-center rotate-90 text-[#626C7D] md:rotate-0"
                                 />
-                                <span className="border border-[#9D91FF] px-2 py-1.5 text-[#9D91FF]">
-                                  {selected.service}
-                                </span>
+                                <div className="rounded-lg border border-[#2D3442] bg-[#171C26] p-3">
+                                  <p className="text-[11px] font-medium uppercase tracking-[.08em] text-[#8B95A7]">
+                                    Incident cluster
+                                  </p>
+                                  <p className="mt-2 text-sm font-medium text-white">
+                                    {selected.logs.length} matching failures
+                                  </p>
+                                  <p className="mt-1 text-xs text-[#8B95A7]">
+                                    {selected.fingerprint}
+                                  </p>
+                                </div>
                                 <ChevronRight
-                                  size={12}
-                                  className="text-[#626C7D]"
+                                  size={18}
+                                  className="mx-auto self-center rotate-90 text-[#626C7D] md:rotate-0"
                                 />
-                                <span className="border border-[#FF4D5E] px-2 py-1.5 text-[#FF6B79]">
-                                  {selected.title}
-                                </span>
+                                <div className="rounded-lg border border-[#FF4D5E]/45 bg-[#FF4D5E]/8 p-3">
+                                  <p className="text-[11px] font-medium uppercase tracking-[.08em] text-[#FF6B79]">
+                                    Production impact
+                                  </p>
+                                  <p className="mt-2 text-sm font-medium text-white">
+                                    {selected.title}
+                                  </p>
+                                  <p className="mt-1 text-xs text-[#8B95A7]">
+                                    {selected.status} ·{' '}
+                                    {time(selected.lastSeen)}
+                                  </p>
+                                </div>
                               </div>
                             </div>
                           </div>
