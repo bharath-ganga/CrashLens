@@ -172,8 +172,8 @@ export async function POST(request: Request) {
         team,
         email,
         `login:${digest}`,
-        'New sign-in to CrashLens',
-        `A sign-in to your CrashLens account succeeded at ${new Date().toISOString()}. If this was not you, open CrashLens and reset your password. Resetting it ends existing sessions.`,
+        'Security notice: New sign-in to your CrashLens account',
+        `Dear ${account.name},\n\nWe are writing to confirm that a new sign-in to your CrashLens account was completed successfully.\n\nDate and time: ${new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeStyle: 'long', timeZone: 'UTC' }).format(new Date())} UTC\n\nIf you recognize this activity, no further action is required. If you did not sign in, please reset your password immediately. Resetting your password will securely end all existing sessions.\n\nKind regards,\nCrashLens Security Team`,
       );
       await flushEmails(env);
       return json({ ok: true }, 200, {
@@ -183,17 +183,47 @@ export async function POST(request: Request) {
     if (!['signup', 'forgot', 'resend'].includes(action))
       return json({ error: 'Unknown action' }, 400);
     if (action === 'signup') {
-      const name = String(body.name ?? '').trim().slice(0, 100);
+      const name = String(body.name ?? '')
+        .trim()
+        .slice(0, 100);
       if (!name || !validPassword(body.password))
-        return json({ error: 'Enter your name and a password between 12 and 128 characters.' }, 400);
+        return json(
+          {
+            error:
+              'Enter your name and a password between 12 and 128 characters.',
+          },
+          400,
+        );
       if (account)
-        return json({ error: 'An account already uses this email. Sign in with your existing password, or use Forgot password.' }, 409);
+        return json(
+          {
+            error:
+              'An account already uses this email. Sign in with your existing password, or use Forgot password.',
+          },
+          409,
+        );
       const created = await env.DB.prepare(
         'INSERT INTO accounts (id,email,name,password_hash) VALUES (?,?,?,?) ON CONFLICT(email) DO NOTHING RETURNING id',
-      ).bind(crypto.randomUUID(), email, name, await hashPassword(body.password)).first<{id:string}>();
+      )
+        .bind(
+          crypto.randomUUID(),
+          email,
+          name,
+          await hashPassword(body.password),
+        )
+        .first<{ id: string }>();
       if (!created)
-        return json({ error: 'An account already uses this email. Please sign in.' }, 409);
-      return json({ message: 'Account created. You can sign in now—no email verification required.' }, 201);
+        return json(
+          { error: 'An account already uses this email. Please sign in.' },
+          409,
+        );
+      return json(
+        {
+          message:
+            'Account created. You can sign in now—no email verification required.',
+        },
+        201,
+      );
     }
     if (!emailConfigured(env))
       return json(
@@ -228,9 +258,11 @@ export async function POST(request: Request) {
       email,
       `${kind}:${digest}`,
       kind === 'reset'
-        ? 'Reset your CrashLens password'
+        ? 'CrashLens password reset request'
         : 'Verify your CrashLens email',
-      `${name},\n\n${kind === 'reset' ? 'Reset your password' : 'Verify your email'} using this single-use link:\n${link}\n\nExpires in ${kind === 'reset' ? 30 : 60} minutes. Ignore this email if you did not request it.`,
+      kind === 'reset'
+        ? `Dear ${name},\n\nWe received a request to reset the password for your CrashLens account. Please use the secure, single-use link below to create a new password.\n\n${link}\n\nFor your security, this link will expire in 30 minutes. If you did not request a password reset, you may safely disregard this email; your password will remain unchanged.\n\nKind regards,\nCrashLens Security Team`
+        : `Dear ${name},\n\nPlease verify your CrashLens email address using the secure, single-use link below.\n\n${link}\n\nThis link will expire in 60 minutes. If you did not request this verification, you may safely disregard this email.\n\nKind regards,\nCrashLens Security Team`,
     );
     await flushEmails(env);
     return json({ message: generic });
