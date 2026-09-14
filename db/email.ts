@@ -4,6 +4,34 @@ export function emailConfigured(env: CrashLensEnv) {
   return Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+export function buildBrandedEmailHtml(subject: string, body: string) {
+  const actionLabel = /reset.*password|password.*reset/i.test(subject)
+    ? 'Reset password securely'
+    : 'Open CrashLens';
+  const content = body
+    .split(/\n\n+/)
+    .map((paragraph) => {
+      const value = paragraph.trim();
+      if (/^https?:\/\/\S+$/.test(value)) {
+        const safeUrl = escapeHtml(value);
+        return `<p style="margin:28px 0"><a href="${safeUrl}" style="display:inline-block;background:#7c6cff;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:8px">${actionLabel}</a></p><p style="margin:0 0 22px;color:#667085;font-size:12px;line-height:1.6;word-break:break-all">If the button does not work, copy and paste this link into your browser:<br>${safeUrl}</p>`;
+      }
+      return `<p style="margin:0 0 18px;color:#344054;font-size:15px;line-height:1.7">${escapeHtml(value).replaceAll('\n', '<br>')}</p>`;
+    })
+    .join('');
+
+  return `<!doctype html><html><body style="margin:0;background:#f2f4f7;font-family:Inter,Segoe UI,Arial,sans-serif;color:#101828"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f2f4f7;padding:32px 16px"><tr><td align="center"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#ffffff;border:1px solid #e4e7ec;border-radius:12px;overflow:hidden"><tr><td style="background:#0d1017;padding:22px 28px"><table role="presentation" cellspacing="0" cellpadding="0"><tr><td style="width:34px;height:34px;background:#7c6cff;border-radius:9px;text-align:center;color:#ffffff;font-weight:700;font-size:18px">C</td><td style="padding-left:11px;color:#ffffff;font-size:17px;font-weight:700">CrashLens</td></tr></table></td></tr><tr><td style="padding:32px 28px 24px"><h1 style="margin:0 0 22px;color:#101828;font-size:24px;line-height:1.3">${escapeHtml(subject)}</h1>${content}</td></tr><tr><td style="border-top:1px solid #e4e7ec;padding:20px 28px;color:#667085;font-size:12px;line-height:1.6">This is an automated security notification from CrashLens. Please do not reply to this email.</td></tr></table></td></tr></table></body></html>`;
+}
+
 export async function queueEmail(
   env: CrashLensEnv,
   teamId: string,
@@ -79,6 +107,7 @@ export async function flushEmails(env: CrashLensEnv) {
           to: [row.recipient],
           subject: row.subject,
           text: row.body,
+          html: buildBrandedEmailHtml(row.subject, row.body),
         }),
       });
       if (!response.ok)
