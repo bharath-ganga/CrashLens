@@ -698,7 +698,12 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="h-[190px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer
+                      width="100%"
+                      height="100%"
+                      minWidth={0}
+                      minHeight={190}
+                    >
                       <AreaChart
                         data={signalBars}
                         margin={{ top: 8, right: 8, left: -28, bottom: 0 }}
