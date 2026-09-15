@@ -1,73 +1,182 @@
 # CrashLens
 
-CrashLens is a production incident investigation and uptime-monitoring platform. It ingests TXT, CSV, JSON, and JSONL logs, redacts sensitive values, groups related errors into incidents, correlates them with deployments and uptime failures, and builds an investigation timeline. The interface uses a solid, square-edged operations-console design.
+**Production error investigation, distributed tracing, and uptime monitoring in one workspace.**
 
-## What is included
+CrashLens collects application logs and telemetry, removes common sensitive values, groups related failures into incidents, and builds an evidence-based timeline. It helps an engineer answer four questions quickly:
 
-- Log upload, parsing, duplicate detection, redaction, incident grouping, severity scoring, timelines, and history.
-- Separate CrashLens email/password accounts, team workspaces, sessions, password reset, and optional ChatGPT access.
-- Project-based HTTP monitors with GET, HEAD, POST, PUT, PATCH, and DELETE checks.
-- Configurable intervals, timeouts, expected status ranges, body assertions (`contains`, `exact`, and `regex`), safe request headers, request bodies, and tags.
-- 30-day uptime bars, 24-hour to 90-day response-time charts, captured check evidence, and manual checks.
-- Automatic outage incidents after three failures, recovery detection, acknowledge/resolve actions, and incident filters.
-- Email, Slack, PagerDuty, and HMAC-SHA256 signed webhook lifecycle notifications.
-- SSRF defenses: HTTPS-only destinations, blocked credentials/query strings/private addresses, DNS checks, no redirects, header restrictions, response-size limits, and database leases.
-- OpenTelemetry-compatible request traces, error-spike detection, deployment correlation, service-level objectives (SLOs), error budgets, and downloadable postmortems.
+1. What failed?
+2. Which service was affected?
+3. Did a recent deployment contribute?
+4. What should the team investigate next?
 
-## Architecture
+> The hosted demonstration is currently owner-private. Run the project locally to explore every feature.
 
-The web application is built with vinext/React and runs on Cloudflare Workers through Sites. D1 stores accounts, teams, uploaded logs, incidents, monitors, checks, projects, sessions, and the email outbox. Resend delivers account and incident emails. An external runner calls the authenticated monitor tick endpoint once per minute.
+## Highlights
 
-## Local development
+| Area                  | What CrashLens provides                                                                                        |
+| --------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Incident intelligence | Log parsing, duplicate detection, fingerprints, clustering, severity scoring, timelines, and status management |
+| Distributed tracing   | OpenTelemetry-compatible JSON ingestion and request paths across multiple services                             |
+| Change correlation    | Matches failures with deployments made during the previous 60 minutes                                          |
+| Reliability           | HTTP uptime monitors, service-level objectives (SLOs), and error-budget tracking                               |
+| Notifications         | Formal account emails plus incident notifications through email, Slack, PagerDuty, and signed webhooks         |
+| Collaboration         | Team workspaces, invitations, assignments, comments, audit history, and administrator client records           |
+| Reporting             | Downloadable Markdown postmortems containing impact, evidence, root-cause status, and follow-up actions        |
+| Security              | Password hashing, session protection, rate limiting, PII redaction, SSRF controls, and server-only credentials |
 
-Run `npm install` and `npm run dev`. After the first start, run `node scripts/migrate-local.mjs` to apply all schema migrations to the local emulator. Production Sites publishing applies the SQL files in `drizzle/`.
+## How it works
 
-Visit `/account` for CrashLens email/password accounts. Existing ChatGPT access remains available at `/signin-with-chatgpt?return_to=/`. A new CrashLens account gets its own workspace; existing team memberships remain intact. No automatic account merging occurs.
+```text
+Logs / OpenTelemetry / uptime checks / deployment events
+                         │
+                         ▼
+              Normalize and redact data
+                         │
+                         ▼
+             Group related failure signals
+                         │
+                         ▼
+       Correlate traces, changes, and error spikes
+                         │
+                         ▼
+       Incident timeline, alerts, and postmortem
+```
 
-## Email delivery setup (required)
+CrashLens treats correlations as investigation evidence—not proof of a root cause. An engineer must confirm the final conclusion.
 
-Create a Resend account, verify a sender domain in its dashboard, and configure these server-only secrets in the hosting environment:
+## Main features
 
-- `RESEND_API_KEY`: sending API key.
-- `EMAIL_FROM`: a verified address such as `CrashLens <alerts@yourdomain.com>`.
-- `APP_ORIGIN`: the exact HTTPS application origin, used for account email links. Never a request-supplied host.
+### Incident investigation
 
-For local development put the same settings in ignored `.dev.vars`. Never commit credentials. Registration and password-based sign-in do not require email delivery or email verification. Existing unverified accounts can sign in with their original password; duplicate signup never overwrites an account. Password recovery still requires a configured sender and a single-use email link. The `verified` field records actual email verification only; it is not an account activation flag. Email ownership is not proven by signup and must not grant access to any other user's workspace. Login notices wait in the outbox when delivery is unavailable.
+- Upload `.txt`, `.log`, `.csv`, `.jsonl`, or `.ndjson` files up to 5 MB.
+- Parse and normalize timestamps, severity levels, service names, and messages.
+- Redact common credentials and sensitive values before persistence.
+- Group repeated errors using stable fingerprints.
+- Build a chronological timeline for each incident.
+- Assign incidents, add comments, and move them through investigating, monitoring, and resolved states.
 
-Email verification links expire in one hour; reset links in 30 minutes. Tokens are single-use, and their database lookup values are SHA-256 hashes. Resetting a password invalidates all sessions. Sessions use random tokens, HttpOnly/SameSite cookies and HTTPS Secure cookies. Authentication is rate limited. Passwords use salted Web Crypto PBKDF2-SHA256 (100,000 iterations, compatible with Workers), with a 12-character minimum. Assess password hashing cost and abuse limits for your production capacity before opening registration broadly.
+### Production intelligence
 
-The outbox stores email bodies until accepted by Resend, then clears them (including account links). Provider acceptance is not inbox delivery. Retries use an idempotency key, exponential backoff, and stop after five failures. Account email links must therefore be treated as sensitive while pending.
+- Accept simple span JSON and OpenTelemetry Protocol JSON at `POST /api/telemetry`.
+- Reconstruct one request across connected services.
+- Highlight the first failing service and operation.
+- Detect error-rate changes by comparing the latest 15 minutes with the previous period.
+- Record CI/CD releases through `POST /api/deployments`.
+- Correlate a failure with a same-service deployment from the previous 60 minutes.
+- Configure an SLO and calculate its remaining error budget.
+- Save and download a structured incident postmortem.
 
-## Uptime monitoring
+### Uptime monitoring
 
-Open Monitoring, choose or create a project, and add a public HTTPS endpoint. Configure its service name, method, interval, timeout, expected HTTP status range, optional response-body assertion, headers, body, and tags. Credentials, query strings, private IP literals, private DNS answers, redirects, and sensitive headers are rejected. Use a public-egress Workers environment; DNS preflight alone is not DNS pinning or a general private-network SSRF boundary.
+- Organize monitors into projects.
+- Check public HTTPS endpoints using `GET`, `HEAD`, `POST`, `PUT`, `PATCH`, or `DELETE`.
+- Configure intervals, timeouts, expected status ranges, safe headers, request bodies, and tags.
+- Validate response bodies using `contains`, `exact`, or `regex` assertions.
+- Display 30-day uptime history and response-time charts from 24 hours to 90 days.
+- Open an outage after three consecutive failures and resolve it after recovery.
+- Acknowledge and resolve monitoring incidents without producing duplicate outage alerts.
 
-Three consecutive failed checks open an outage incident and queue one notification to each workspace member. The next success resolves the outage and queues a recovery message. Repeated failures during the same outage do not flood inboxes. Each uploaded incident also queues an email. Matching service names let you compare the outage with log incidents in History; this is correlation, not proof of a root cause. Uptime is the fraction of successful observed checks over 30 days, not a time-weighted SLA.
+### Accounts and teams
 
-### Optional alert destinations
+- Create a separate CrashLens email/password account.
+- Sign in using a secure HTTP-only session cookie.
+- Request a single-use password-reset email.
+- Receive a formal security notice after a successful password sign-in.
+- Keep optional ChatGPT access alongside separate CrashLens accounts.
+- View registered client details from the administrator-only dashboard.
 
-Configure any of these server-only values in `.dev.vars` locally and in the hosting environment for production:
+## Technology stack
 
-- `SLACK_WEBHOOK_URL` — Slack incoming-webhook URL.
-- `PAGERDUTY_ROUTING_KEY` — PagerDuty Events API v2 integration key.
-- `ALERT_WEBHOOK_URL` — HTTPS endpoint that receives CrashLens lifecycle JSON.
-- `ALERT_WEBHOOK_SECRET` — secret used to sign the webhook body in `X-CrashLens-Signature` as `sha256=<hex>`.
+- **Frontend:** React 19, TypeScript, Tailwind CSS, Recharts, Lucide icons
+- **Application framework:** vinext
+- **Runtime:** Cloudflare Workers
+- **Database:** Cloudflare D1 / SQLite
+- **Object storage:** Cloudflare R2
+- **Email:** Resend
+- **Hosting:** OpenAI Sites
+- **Quality:** Node test runner, oxlint, TypeScript, oxfmt
 
-Lifecycle events are `opened`, `acknowledged`, and `resolved`. Keep every credential out of Git.
+## Local setup
 
-### Always-on scheduler (required)
+### Requirements
 
-Configure a strong random `MONITOR_CRON_TOKEN` on the app and the runner, and `CRASHLENS_URL` on the runner. Run `node scripts/monitor-runner.mjs` on an always-on host. It POSTs to `/api/monitor-tick` once per minute and processes due monitors with database leases. `--once` performs one tick. The browser is not a scheduler.
+- Node.js 22.13 or newer
+- npm
 
-The current Sites deployment is owner-private: the platform access gate is separate from this API token and must also allow the scheduler request. An external runner cannot pass that gate with `MONITOR_CRON_TOKEN` alone. Use a hosting arrangement with supported machine access or deploy the app on your own Worker before claiming unattended production monitoring. No cron job, public audience change, or machine access grant is created automatically by this repository. Monitoring displays Not connected until a runner heartbeat has arrived recently.
+### Start the application
 
-Sites' existing access gate also remains in front of the new account page. Separate accounts do not automatically make the site public.
+```bash
+git clone https://github.com/bharath-ganga/CrashLens.git
+cd CrashLens
+npm install
+npm run dev
+```
 
-## Production intelligence
+Open [http://localhost:3000](http://localhost:3000).
 
-Open **Intelligence** and select **Load sample signals** for a complete demonstration. CrashLens shows one checkout request moving through the gateway, checkout service, payment service, and database call. The failing span is highlighted, a recent deployment is shown as a possible trigger, the error rate is compared with the previous 15-minute period, and service reliability is compared with a 99.9% target. **Generate report** saves and downloads a Markdown postmortem. Deployment correlation is evidence, not proof; an engineer must confirm the root cause.
+After the first development start creates the local D1 emulator, apply the SQL migrations:
 
-For real application data, configure `INGESTION_TOKEN` and `INGESTION_TEAM_ID`, then send OpenTelemetry Protocol JSON or the simpler `spans` JSON format to `POST /api/telemetry` with `X-CrashLens-Ingest-Token`. Send CI/CD releases to `POST /api/deployments` with `service`, `version`, and optional `environment`, `status`, `actor`, `source`, and ISO `deployedAt`. A ready-to-send trace example is available at `/samples/crashlens-otel.json`. `INGESTION_TEAM_ID` must match the team id returned by the authenticated `/api/workspace` response, otherwise machine data will not appear in that workspace.
+```bash
+node scripts/migrate-local.mjs
+```
+
+Restart the development server after changing `.dev.vars`.
+
+## Environment configuration
+
+Copy the example file and add only the values you need:
+
+```powershell
+Copy-Item .dev.vars.example .dev.vars
+```
+
+Important server-only variables:
+
+| Variable                | Purpose                                                       |
+| ----------------------- | ------------------------------------------------------------- |
+| `RESEND_API_KEY`        | Sends security, password-reset, and incident emails           |
+| `EMAIL_FROM`            | Verified sender, for example `CrashLens <alerts@example.com>` |
+| `APP_ORIGIN`            | Exact application origin used in account links                |
+| `ADMIN_EMAILS`          | Comma-separated administrator email allowlist                 |
+| `INGESTION_TOKEN`       | Protects machine log, trace, and deployment ingestion         |
+| `INGESTION_TEAM_ID`     | Routes machine data into the correct team workspace           |
+| `MONITOR_CRON_TOKEN`    | Authenticates the external uptime runner                      |
+| `SLACK_WEBHOOK_URL`     | Optional Slack incident notifications                         |
+| `PAGERDUTY_ROUTING_KEY` | Optional PagerDuty Events API integration                     |
+| `ALERT_WEBHOOK_URL`     | Optional lifecycle-event destination                          |
+| `ALERT_WEBHOOK_SECRET`  | Signs lifecycle webhooks using HMAC-SHA256                    |
+| `OPENAI_API_KEY`        | Optional LLM-assisted investigation                           |
+
+Never commit `.dev.vars`, API keys, database URLs, or webhook secrets.
+
+## Quick demonstration
+
+### Test log investigation
+
+1. Open CrashLens and select **Upload source**.
+2. Choose a sample file or upload your own log file.
+3. Open the generated incident.
+4. Review the analysis, timeline, related logs, and possible trigger.
+5. Save the analysis to your authenticated workspace.
+
+Sample log files are available under [`public/samples`](./public/samples).
+
+### Test production intelligence
+
+1. Create an account or sign in.
+2. Open **Intelligence** in the sidebar.
+3. Select **Load sample signals**.
+4. Follow the checkout request across the gateway, checkout service, payment service, and database operation.
+5. Review the detected anomaly, possible deployment trigger, and reliability target.
+6. Select **Generate report** to save and download a Markdown postmortem.
+
+## API examples
+
+Machine endpoints require `X-CrashLens-Ingest-Token`. Configure `INGESTION_TEAM_ID` using the team ID returned by authenticated `GET /api/workspace`; otherwise external data will not appear in the expected workspace.
+
+### Send traces
+
+A complete example payload is available at [`public/samples/crashlens-otel.json`](./public/samples/crashlens-otel.json).
 
 ```bash
 curl -X POST https://your-crashlens-host/api/telemetry \
@@ -76,25 +185,127 @@ curl -X POST https://your-crashlens-host/api/telemetry \
   --data-binary @public/samples/crashlens-otel.json
 ```
 
-The endpoint accepts up to 5,000 spans per request and stores service, operation, status, timestamps, duration, environment, trace relationships, and bounded attributes in D1. Keep the token server-side and rotate it if exposed.
+The endpoint accepts up to 5,000 spans per request and stores bounded attributes, trace relationships, service, operation, status, timestamp, duration, and environment.
 
-### Regional monitoring status
+### Record a deployment
 
-The repository records the check region and exposes the evidence in the dashboard. The bundled runner performs checks from its own `origin` region. True US/EU/APAC consensus requires deploying runners in those regions and securely coordinating their results; the UI does not claim those agents exist until they are actually deployed.
+```bash
+curl -X POST https://your-crashlens-host/api/deployments \
+  -H "Content-Type: application/json" \
+  -H "X-CrashLens-Ingest-Token: YOUR_TOKEN" \
+  -d '{
+    "service": "payment-service",
+    "version": "checkout-v318",
+    "environment": "production",
+    "status": "success",
+    "actor": "github-actions"
+  }'
+```
+
+### Send structured logs
+
+```bash
+curl -X POST https://your-crashlens-host/api/ingest \
+  -H "Content-Type: application/json" \
+  -H "X-CrashLens-Ingest-Token: YOUR_TOKEN" \
+  -d '{
+    "source": "payment-service",
+    "logs": [
+      {
+        "timestamp": "2026-09-14T14:32:00Z",
+        "level": "error",
+        "service": "payment-service",
+        "message": "Database connection timeout"
+      }
+    ]
+  }'
+```
+
+## Email behavior
+
+Account creation and password sign-in do not require email verification. Password recovery does require a configured and verified sender.
+
+- Verification links expire after one hour.
+- Password-reset links expire after 30 minutes.
+- Tokens are single-use and stored as SHA-256 digests.
+- Resetting a password invalidates existing sessions.
+- Login notifications remain in the outbox when email delivery is unavailable.
+- Provider acceptance means that Resend accepted the request; it does not guarantee inbox delivery.
+
+Resend configuration:
+
+1. Create a Resend account.
+2. Verify a sender domain.
+3. Create a sending API key.
+4. Add `RESEND_API_KEY`, `EMAIL_FROM`, and `APP_ORIGIN` to `.dev.vars` locally and to the hosting environment in production.
+
+## Uptime runner
+
+The browser is not an always-on scheduler. An external process must call the monitor tick endpoint once per minute:
+
+```bash
+node scripts/monitor-runner.mjs
+```
+
+Use `--once` to execute one tick. The runner requires `CRASHLENS_URL` and the same `MONITOR_CRON_TOKEN` configured on the application.
+
+The Sites deployment is currently owner-private. That access gate is separate from `MONITOR_CRON_TOKEN`, so an external runner also needs a hosting arrangement that supports machine access. Do not claim unattended monitoring until the runner can reach the deployed endpoint.
+
+## Security design
+
+- Passwords use salted PBKDF2-SHA256 with 100,000 iterations.
+- Sessions use random tokens and HTTP-only, SameSite cookies; production cookies are Secure.
+- Authentication endpoints are rate limited.
+- Uploaded content is redacted before D1/R2 persistence.
+- Monitor targets are HTTPS-only.
+- Credentials, query strings, redirects, private IP literals, and private DNS answers are rejected for monitors.
+- Sensitive request headers and oversized responses are blocked.
+- Alert webhooks can be signed using HMAC-SHA256.
+- Administrator APIs validate the email allowlist on every request.
+
+Security controls reduce risk but do not replace a dedicated security review before opening the service to untrusted public users.
 
 ## Database migrations
 
-Schema changes live in `drizzle/`. Migration `0004_uptime_control.sql` adds monitor projects, advanced HTTP configuration, regions, and evidence. Migration `0005_production_intelligence.sql` adds traces, deployments, SLOs, and postmortems. Run `node scripts/migrate-local.mjs` after pulling changes. Sites applies committed migrations when publishing.
+Committed migrations live in [`drizzle`](./drizzle):
 
-## Platform client administration
+- `0001_production_foundation.sql` — teams, incidents, logs, integrations, and audit records
+- `0002_monitoring_email.sql` — monitoring and email delivery
+- `0003_accounts.sql` — separate CrashLens accounts and sessions
+- `0004_uptime_control.sql` — projects, advanced checks, regions, and evidence
+- `0005_production_intelligence.sql` — traces, deployments, SLOs, and postmortems
 
-Set the server-only `ADMIN_EMAILS` variable to a comma-separated list of trusted administrator email addresses. Signed-in administrators then see a **Clients** section containing registered account names, emails, verification state, active-session count, workspace, incident and upload totals, and the account creation date/time in both the browser's local time and UTC. The API checks the allowlist on every request; hiding the navigation item is not the security boundary.
-
-For local development, add `ADMIN_EMAILS=you@example.com` to `.dev.vars`. Configure the same value in the hosted Sites environment. Never expose this endpoint to every registered account.
+Sites applies committed migrations during publishing. For local development, use `node scripts/migrate-local.mjs` after the local emulator has been created.
 
 ## Verification
 
-- `npm test` — parser, redaction, hashing, URL safety, probe configuration, and outage transition tests.
-- `npm run lint` and `npx tsc --noEmit`.
-- `npm run build`.
-- With dev running and migrations applied: `node --experimental-strip-types scripts/test-local.mjs`. This creates disposable local account fixtures, tests verification/reset/session revocation and monitor records, then removes only its fixtures. No real emails are sent. Registration and inbox delivery still require a configured sender and end-to-end provider testing.
+```bash
+npm test
+npm run lint
+npx tsc --noEmit
+npm run build
+```
+
+For authenticated local integration checks, start the development server, apply migrations, and run:
+
+```bash
+node --experimental-strip-types scripts/test-local.mjs
+```
+
+The integration script creates disposable local fixtures and removes only those fixtures. It does not send real emails.
+
+## Current limitations
+
+- Deployment correlation is time-and-service-based evidence, not causal proof.
+- Automatic monitoring requires a reachable external scheduler.
+- True multi-region consensus requires runners deployed in multiple regions.
+- Email delivery and third-party alerts require separately configured provider credentials.
+- The hosted demo remains private until its access policy is intentionally changed.
+
+## Resume summary
+
+> Built CrashLens, a full-stack production observability platform using React, TypeScript, Cloudflare Workers, D1, R2, and Resend. Implemented secure authentication, log clustering, distributed tracing, deployment correlation, SLO/error-budget tracking, uptime monitoring, multi-channel alerts, team collaboration, and automated postmortem generation.
+
+## License
+
+This repository does not currently declare an open-source license. Add a license before allowing third parties to reuse or redistribute the project.
