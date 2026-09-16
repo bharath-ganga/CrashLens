@@ -132,10 +132,10 @@ export async function GET(request: Request) {
     : null;
   const total = spans.length;
   const successful = spans.filter((span) => span.status === 'ok').length;
-  const target = Number(
-    (objectives.results[0] as Record<string, unknown> | undefined)
-      ?.target_percent ?? 99.9,
-  );
+  const configuredTarget = (
+    objectives.results[0] as Record<string, unknown> | undefined
+  )?.target_percent;
+  const target = typeof configuredTarget === 'number' ? configuredTarget : null;
   return json({
     spans,
     traces,
@@ -155,8 +155,9 @@ export async function GET(request: Request) {
       observedPercent: total
         ? Number(((successful / total) * 100).toFixed(2))
         : null,
-      errorBudgetRemaining: errorBudgetPercent(successful, total, target),
-      sampleSize: total,
+      errorBudgetRemaining:
+        target === null ? null : errorBudgetPercent(successful, total, target),
+      observedSpanCount: total,
     },
   });
 }
@@ -171,88 +172,6 @@ export async function POST(request: Request) {
   if (!ctx) return json({ error: 'Authentication required' }, 401);
   const body = (await request.json()) as Record<string, unknown>;
   const action = textValue(body.action);
-
-  if (action === 'seed_demo') {
-    const base = Date.now();
-    const traceId = `trace-demo-${base}`;
-    const deploymentId = crypto.randomUUID();
-    await ctx.runtime.DB.prepare(
-      `INSERT INTO deployments (id, team_id, service, version, environment, status, actor, deployed_at, source)
-       VALUES (?, ?, 'payment-service', 'checkout-v318', 'production', 'success', ?, ?, 'demo')`,
-    )
-      .bind(
-        deploymentId,
-        ctx.teamId,
-        ctx.user.name,
-        new Date(base - 8 * 60_000).toISOString(),
-      )
-      .run();
-    const spanData = [
-      ['gateway', 'POST /checkout', 'ok', 810, null, -3_000],
-      ['checkout-service', 'create-order', 'ok', 690, 'gateway', -2_900],
-      [
-        'payment-service',
-        'charge-card',
-        'error',
-        612,
-        'checkout-service',
-        -2_800,
-      ],
-      [
-        'payment-service',
-        'postgres.query',
-        'error',
-        590,
-        'payment-service',
-        -2_700,
-      ],
-      [
-        'payment-service',
-        'connection-pool.acquire',
-        'error',
-        570,
-        'payment-service',
-        -2_650,
-      ],
-    ] as const;
-    await ctx.runtime.DB.batch(
-      spanData.map(
-        ([service, operation, status, duration, parent, offset], index) =>
-          ctx.runtime.DB.prepare(
-            `INSERT INTO telemetry_spans
-           (id, team_id, trace_id, parent_span_id, service, operation, status, started_at, duration_ms, environment, attributes_json, source)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'production', ?, 'demo')`,
-          ).bind(
-            `${traceId}-${index}`,
-            ctx.teamId,
-            traceId,
-            parent ? `${traceId}-${Math.max(0, index - 1)}` : null,
-            service,
-            operation,
-            status,
-            new Date(base + offset).toISOString(),
-            duration,
-            JSON.stringify({ 'http.route': '/checkout', 'demo.signal': true }),
-          ),
-      ),
-    );
-    await ctx.runtime.DB.prepare(
-      `INSERT INTO service_objectives (id, team_id, service, target_percent, window_days)
-       VALUES (?, ?, 'payment-service', 99.9, 30)
-       ON CONFLICT(team_id, service) DO UPDATE SET target_percent = 99.9, updated_at = CURRENT_TIMESTAMP`,
-    )
-      .bind(crypto.randomUUID(), ctx.teamId)
-      .run();
-    await audit(
-      ctx.runtime.DB,
-      ctx.teamId,
-      ctx.user.id,
-      'intelligence.demo_loaded',
-      'trace',
-      traceId,
-    );
-    return json({ ok: true, traceId }, 201);
-  }
 
   if (action === 'set_slo') {
     const service = textValue(body.service).trim().slice(0, 100);
@@ -310,11 +229,18 @@ export async function POST(request: Request) {
         .bind(ctx.teamId)
         .first<Record<string, unknown>>(),
     ]);
+    if (!incident && !failedSpan)
+      return json(
+        {
+          error: 'No real incident or failed trace is available for a report.',
+        },
+        400,
+      );
     const report = buildPostmortem({
       title: textValue(incident?.title, 'Production request failure'),
       service: textValue(
         incident?.service,
-        textValue(failedSpan?.service, 'payment-service'),
+        textValue(failedSpan?.service, 'unknown-service'),
       ),
       startedAt: textValue(
         incident?.started_at,

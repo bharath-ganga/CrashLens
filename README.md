@@ -9,7 +9,7 @@ CrashLens collects application logs and telemetry, removes common sensitive valu
 3. Did a recent deployment contribute?
 4. What should the team investigate next?
 
-> The hosted demonstration is currently owner-private. Run the project locally to explore every feature.
+> The hosted application is currently owner-private. Run the project locally to explore every feature.
 
 ## Highlights
 
@@ -149,26 +149,25 @@ Important server-only variables:
 
 Never commit `.dev.vars`, API keys, database URLs, or webhook secrets.
 
-## Quick demonstration
+## Using real data
 
 ### Test log investigation
 
 1. Open CrashLens and select **Upload source**.
-2. Choose a sample file or upload your own log file.
+2. Upload a log export from your application or observability provider.
 3. Open the generated incident.
 4. Review the analysis, timeline, related logs, and possible trigger.
 5. Save the analysis to your authenticated workspace.
-
-Sample log files are available under [`public/samples`](./public/samples).
 
 ### Test production intelligence
 
 1. Create an account or sign in.
 2. Open **Intelligence** in the sidebar.
-3. Select **Load sample signals**.
-4. Follow the checkout request across the gateway, checkout service, payment service, and database operation.
-5. Review the detected anomaly, possible deployment trigger, and reliability target.
-6. Select **Generate report** to save and download a Markdown postmortem.
+3. Configure `INGESTION_TOKEN` and `INGESTION_TEAM_ID`.
+4. Send real application traces to `POST /api/telemetry`.
+5. Send release events from CI/CD to `POST /api/deployments`.
+6. Review request paths, anomalies, possible deployment triggers, and reliability targets.
+7. Select **Generate report** to save and download a Markdown postmortem.
 
 ## API examples
 
@@ -176,13 +175,22 @@ Machine endpoints require `X-CrashLens-Ingest-Token`. Configure `INGESTION_TEAM_
 
 ### Send traces
 
-A complete example payload is available at [`public/samples/crashlens-otel.json`](./public/samples/crashlens-otel.json).
-
 ```bash
 curl -X POST https://your-crashlens-host/api/telemetry \
   -H "Content-Type: application/json" \
   -H "X-CrashLens-Ingest-Token: YOUR_TOKEN" \
-  --data-binary @public/samples/crashlens-otel.json
+  -d '{
+    "spans": [{
+      "spanId": "SPAN_ID",
+      "traceId": "TRACE_ID",
+      "service": "YOUR_SERVICE",
+      "operation": "REQUEST_NAME",
+      "status": "ok",
+      "startedAt": "2026-09-16T10:00:00Z",
+      "durationMs": 125,
+      "environment": "production"
+    }]
+  }'
 ```
 
 The endpoint accepts up to 5,000 spans per request and stores bounded attributes, trace relationships, service, operation, status, timestamp, duration, and environment.
@@ -300,7 +308,7 @@ The integration script creates disposable local fixtures and removes only those 
 - Automatic monitoring requires a reachable external scheduler.
 - True multi-region consensus requires runners deployed in multiple regions.
 - Email delivery and third-party alerts require separately configured provider credentials.
-- The hosted demo remains private until its access policy is intentionally changed.
+- The hosted application remains private until its access policy is intentionally changed.
 
 ## Resume summary
 

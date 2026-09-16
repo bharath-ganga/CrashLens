@@ -434,24 +434,3 @@ export function buildReport(incident: Incident, filename: string): string {
     ),
   ].join('\n');
 }
-
-export const SAMPLE_JSONL = [
-  '{"timestamp":"2026-08-31T14:26:00Z","level":"info","service":"payment-service","message":"Deployment #318 completed version=4.12.0"}',
-  '{"timestamp":"2026-08-31T14:29:00Z","level":"warn","service":"payment-service","message":"Database connections increased from 42 to 118"}',
-  '{"timestamp":"2026-08-31T14:31:00Z","level":"warn","service":"checkout-api","message":"API latency p95 increased to 1.8s"}',
-  '{"timestamp":"2026-08-31T14:32:00Z","level":"error","service":"payment-service","message":"Payment failed: database connection timeout order_id=84721"}',
-  '{"timestamp":"2026-08-31T14:32:04Z","level":"error","service":"payment-service","message":"Payment failed: database connection timeout order_id=84722"}',
-  '{"timestamp":"2026-08-31T14:32:08Z","level":"error","service":"payment-service","message":"Payment failed: database connection timeout order_id=84723"}',
-  '{"timestamp":"2026-08-31T14:32:12Z","level":"error","service":"checkout-api","message":"Checkout failed because payment request timed out"}',
-  '{"timestamp":"2026-08-31T14:32:16Z","level":"error","service":"checkout-api","message":"Checkout failed because payment request timed out"}',
-  '{"timestamp":"2026-08-31T14:34:00Z","level":"fatal","service":"checkout-api","message":"SLO alert triggered: checkout error rate reached 12.4%"}',
-  '{"timestamp":"2026-08-31T14:35:00Z","level":"info","service":"identity-api","message":"Token validation completed"}',
-  '{"timestamp":"2026-08-31T14:36:00Z","level":"warn","service":"media-worker","message":"Memory usage increased above 86 percent"}',
-  '{"timestamp":"2026-08-31T14:36:30Z","level":"error","service":"media-worker","message":"OutOfMemoryError while processing image job 9912"}',
-  '{"timestamp":"2026-08-31T14:36:34Z","level":"error","service":"media-worker","message":"OutOfMemoryError while processing image job 9913"}',
-  '{"timestamp":"2026-08-31T14:37:00Z","level":"warn","service":"identity-api","message":"Redis failover started on cache-primary"}',
-  '{"timestamp":"2026-08-31T14:39:00Z","level":"error","service":"identity-api","message":"Authentication failed: token lookup timed out user_id=441"}',
-  '{"timestamp":"2026-08-31T14:39:05Z","level":"error","service":"identity-api","message":"Authentication failed: token lookup timed out user_id=442"}',
-  '{"timestamp":"2026-08-31T14:40:00Z","level":"warn","service":"gateway","message":"Rate limit reached for checkout route"}',
-  '{"timestamp":"2026-08-31T14:41:00Z","level":"info","service":"payment-service","message":"Rollback to version 4.11.3 started"}',
-].join('\n');

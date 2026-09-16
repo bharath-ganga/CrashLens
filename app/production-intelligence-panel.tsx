@@ -8,7 +8,6 @@ import {
   Download,
   FileText,
   GitCommitHorizontal,
-  LoaderCircle,
   Network,
   RadioTower,
   ShieldCheck,
@@ -52,10 +51,10 @@ type Intelligence = {
     windowMinutes: number;
   } | null;
   reliability: {
-    targetPercent: number;
+    targetPercent: number | null;
     observedPercent: number | null;
-    errorBudgetRemaining: number;
-    sampleSize: number;
+    errorBudgetRemaining: number | null;
+    observedSpanCount: number;
   };
 };
 
@@ -107,7 +106,8 @@ export default function ProductionIntelligencePanel() {
   const [data, setData] = useState<Intelligence | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
-  const [targetInput, setTargetInput] = useState('99.9');
+  const [serviceInput, setServiceInput] = useState('');
+  const [targetInput, setTargetInput] = useState('');
 
   const load = useCallback(async () => {
     const response = await fetch('/api/intelligence', { cache: 'no-store' });
@@ -146,8 +146,6 @@ export default function ProductionIntelligencePanel() {
         setMessage('Postmortem created, saved, and downloaded.');
       } else if (name === 'set_slo') {
         setMessage('Reliability target saved.');
-      } else {
-        setMessage('Sample production signals loaded successfully.');
       }
       await load();
     } catch (error) {
@@ -176,18 +174,10 @@ export default function ProductionIntelligencePanel() {
               reliability in one investigation.
             </p>
           </div>
-          <button
-            onClick={() => action('seed_demo')}
-            disabled={busy}
-            className="flex h-10 items-center justify-center gap-2 bg-[#7C6CFF] px-4 text-sm font-semibold text-white disabled:opacity-60"
-          >
-            {busy ? (
-              <LoaderCircle size={16} className="animate-spin" />
-            ) : (
-              <RadioTower size={16} />
-            )}
-            Load sample signals
-          </button>
+          <div className="flex h-10 items-center gap-2 border border-[#343B4A] bg-[#0D1017] px-4 text-sm text-[#8B95A7]">
+            <RadioTower size={16} />
+            Waiting for real telemetry
+          </div>
         </div>
         <div className="grid gap-px bg-[#232936] md:grid-cols-2 xl:grid-cols-3">
           {explanations.map(({ icon: Icon, title, text }, index) => (
@@ -255,8 +245,7 @@ export default function ProductionIntelligencePanel() {
             </div>
           ) : (
             <div className="p-8 text-center text-sm text-[#8B95A7]">
-              Load sample signals or connect OpenTelemetry to see a request
-              path.
+              Connect OpenTelemetry to see a real request path.
             </div>
           )}
         </section>
@@ -313,7 +302,9 @@ export default function ProductionIntelligencePanel() {
                 : `${reliability.observedPercent}%`}
             </p>
             <p className="text-xs text-[#8B95A7]">
-              Target {reliability?.targetPercent ?? 99.9}%
+              {reliability?.targetPercent == null
+                ? 'Target not configured'
+                : `Target ${reliability.targetPercent}%`}
             </p>
           </div>
           <div className="mt-4 h-2 bg-[#232936]">
@@ -323,21 +314,31 @@ export default function ProductionIntelligencePanel() {
             />
           </div>
           <p className="mt-2 text-xs text-[#8B95A7]">
-            {reliability?.errorBudgetRemaining ?? 100}% error budget remaining ·{' '}
-            {reliability?.sampleSize ?? 0} spans
+            {reliability?.errorBudgetRemaining == null
+              ? 'Set an SLO to calculate the error budget'
+              : `${reliability.errorBudgetRemaining}% error budget remaining`}{' '}
+            · {reliability?.observedSpanCount ?? 0} spans
           </p>
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_90px_auto]">
+            <input
+              aria-label="Service name"
+              value={serviceInput}
+              onChange={(event) => setServiceInput(event.target.value)}
+              placeholder="Service name"
+              className="min-w-0 border border-[#343B4A] bg-[#0D1017] px-3 py-2 text-xs text-white placeholder:text-[#626C7D]"
+            />
             <input
               aria-label="Reliability target percent"
               value={targetInput}
               onChange={(event) => setTargetInput(event.target.value)}
               className="min-w-0 flex-1 border border-[#343B4A] bg-[#0D1017] px-3 py-2 text-xs text-white"
               inputMode="decimal"
+              placeholder="99.9"
             />
             <button
               onClick={() =>
                 action('set_slo', {
-                  service: 'payment-service',
+                  service: serviceInput,
                   targetPercent: Number(targetInput),
                   windowDays: 30,
                 })

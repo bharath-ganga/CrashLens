@@ -15,19 +15,15 @@ import {
   ArrowDownToLine,
   Bell,
   Boxes,
-  Braces,
   CheckCircle2,
   ChevronRight,
   CircleCheck,
   Clipboard,
   Database,
-  Download,
   FileCode2,
-  FileText,
   Filter,
   GitCommitHorizontal,
   LayoutDashboard,
-  ListTree,
   HeartPulse,
   History,
   LoaderCircle,
@@ -66,11 +62,10 @@ import {
   Incident,
   LogEntry,
   parseLogContent,
-  SAMPLE_JSONL,
 } from '@/lib/log-analyzer';
 
-const initialLogs = parseLogContent(SAMPLE_JSONL, 'crashlens-sample.jsonl');
-const initialIncidents = analyzeLogs(initialLogs);
+const initialLogs: LogEntry[] = [];
+const initialIncidents: Incident[] = [];
 
 type WorkspaceRow = Record<string, string | number | null>;
 type Workspace = {
@@ -152,8 +147,8 @@ export default function Home() {
   const [logs, setLogs] = useState<LogEntry[]>(initialLogs);
   const [incidents, setIncidents] = useState<Incident[]>(initialIncidents);
   const [selectedId, setSelectedId] = useState(initialIncidents[0]?.id ?? '');
-  const [filename, setFilename] = useState('crashlens-sample.jsonl');
-  const [fileSize, setFileSize] = useState('4.2 KB');
+  const [filename, setFilename] = useState('');
+  const [fileSize, setFileSize] = useState('0 KB');
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState<'analysis' | 'timeline' | 'logs'>('analysis');
   const [processing, setProcessing] = useState(false);
@@ -252,16 +247,6 @@ export default function Home() {
       icon: Server,
     },
   ];
-  const sampleFiles: Array<{
-    label: string;
-    extension: string;
-    icon: LucideIcon;
-  }> = [
-    { label: 'JSONL', extension: 'jsonl', icon: Braces },
-    { label: 'CSV', extension: 'csv', icon: ListTree },
-    { label: 'TXT', extension: 'txt', icon: FileText },
-  ];
-
   const loadWorkspace = useCallback(async (quiet = false) => {
     if (!quiet) setWorkspaceBusy(true);
     try {
@@ -333,9 +318,7 @@ export default function Home() {
   async function processFile(file: File) {
     setError('');
     if (file.size > 5 * 1024 * 1024) {
-      setError(
-        'File is larger than 5 MB. Split it into a smaller sample first.',
-      );
+      setError('File is larger than 5 MB. Split it into a smaller file first.');
       return;
     }
     setProcessing(true);
@@ -396,17 +379,6 @@ export default function Home() {
     setDragging(false);
     const file = event.dataTransfer.files?.[0];
     if (file) void processFile(file);
-  }
-
-  function resetSample() {
-    setLogs(initialLogs);
-    setIncidents(initialIncidents);
-    setSelectedId(initialIncidents[0]?.id ?? '');
-    setFilename('crashlens-sample.jsonl');
-    setFileSize('4.2 KB');
-    setError('');
-    setUploadOpen(false);
-    setResolved([]);
   }
 
   return (
@@ -574,11 +546,14 @@ export default function Home() {
                 CURRENT SOURCE
               </p>
               <div className="rounded-xl border border-[#232936] bg-[#11151D] p-4">
-                <div className="mb-2 flex items-center gap-2 text-xs font-medium text-[#35D07F]">
-                  <CheckCircle2 size={14} /> Parsed
+                <div
+                  className={`mb-2 flex items-center gap-2 text-xs font-medium ${filename ? 'text-[#35D07F]' : 'text-[#8B95A7]'}`}
+                >
+                  {filename ? <CheckCircle2 size={14} /> : <Radio size={14} />}
+                  {filename ? 'Parsed' : 'Waiting for data'}
                 </div>
                 <p className="truncate text-sm text-[#F4F7FB]" title={filename}>
-                  {filename}
+                  {filename || 'No source connected'}
                 </p>
                 <p className="mt-2 text-xs text-[#8B95A7]">
                   {logs.length} rows · {fileSize}
@@ -618,14 +593,6 @@ export default function Home() {
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <a
-                  href="/samples/crashlens-sample.jsonl"
-                  download
-                  className="flex h-10 items-center gap-2 rounded-lg border border-[#2D3442] bg-[#11151D] px-4 text-xs font-semibold text-[#D9DEEA] hover:bg-[#171C26]"
-                >
-                  <Download size={15} />
-                  Sample JSONL
-                </a>
                 <button
                   onClick={() => setUploadOpen(true)}
                   className="flex h-10 items-center gap-2 rounded-lg bg-[#7C6CFF] px-5 text-xs font-semibold text-white shadow-[0_8px_24px_rgba(124,108,255,.2)] hover:bg-[#8A7BFF]"
@@ -1333,31 +1300,10 @@ export default function Home() {
                 {error}
               </p>
             )}
-            <div className="border-t border-[#232936] bg-[#0D1017] p-5">
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-xs text-[#8B95A7]">
-                  DON&apos;T HAVE LOGS?
-                </span>
-                <button
-                  onClick={resetSample}
-                  className="text-xs font-bold text-[#7C6CFF]"
-                >
-                  LOAD BUILT-IN SAMPLE
-                </button>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {sampleFiles.map(({ label, extension, icon: Icon }) => (
-                  <a
-                    key={label}
-                    href={`/samples/crashlens-sample.${extension}`}
-                    download
-                    className="flex items-center justify-center gap-2 border border-[#2D3442] bg-[#171C26] py-2 text-xs text-[#B5BECD] hover:border-[#7d7d7d] hover:text-white"
-                  >
-                    <Icon size={12} />
-                    {label}
-                  </a>
-                ))}
-              </div>
+            <div className="border-t border-[#232936] bg-[#0D1017] p-5 text-xs leading-5 text-[#8B95A7]">
+              Upload logs exported by your application, container platform, or
+              observability provider. CrashLens will not create artificial
+              incidents.
             </div>
           </div>
         </div>
@@ -1442,7 +1388,9 @@ function LocalDataConsole({
               <CheckCircle2 size={16} /> Log ingestion is operational
             </div>
             <p className="mt-2 text-xs text-[#626C7D]">
-              {logs.length} events parsed from {filename}
+              {filename
+                ? `${logs.length} events parsed from ${filename}`
+                : 'No log source is connected yet.'}
             </p>
           </div>
         </section>
@@ -1613,7 +1561,7 @@ function LocalDataConsole({
         {[
           ['Workspace', workspace?.team.name ?? 'Local workspace'],
           ['Signed in as', workspace?.user.email ?? 'Local analyzer'],
-          ['Current source', filename],
+          ['Current source', filename || 'No source connected'],
           ['Privacy', 'PII redaction enabled'],
         ].map(([label, value]) => (
           <div
