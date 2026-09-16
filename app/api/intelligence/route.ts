@@ -258,7 +258,7 @@ export async function POST(request: Request) {
       .bind(
         id,
         ctx.teamId,
-        incident?.id ?? null,
+        textValue(incident?.id) || null,
         textValue(incident?.title, 'Production request failure'),
         report,
         ctx.user.id,

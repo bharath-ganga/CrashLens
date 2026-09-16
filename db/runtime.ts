@@ -1,11 +1,13 @@
 import { env } from 'cloudflare:workers';
-import { schemaStatements } from './schema';
 import { sessionUser } from './accounts';
+import { createDatabase, type Database } from './database';
 export { redactSensitiveData } from '@/lib/security';
 
 export type CrashLensEnv = Cloudflare.Env & {
-  DB: D1Database;
+  DB: Database;
   FILES: R2Bucket;
+  TURSO_DATABASE_URL: string;
+  TURSO_AUTH_TOKEN: string;
   OPENAI_API_KEY?: string;
   SLACK_WEBHOOK_URL?: string;
   EMAIL_WEBHOOK_URL?: string;
@@ -22,7 +24,16 @@ export type CrashLensEnv = Cloudflare.Env & {
 };
 
 export function getRuntimeEnv(): CrashLensEnv {
-  return env as CrashLensEnv;
+  const runtime = env as Omit<CrashLensEnv, 'DB'>;
+  if (!runtime.TURSO_DATABASE_URL || !runtime.TURSO_AUTH_TOKEN) {
+    throw new Error(
+      'TURSO_DATABASE_URL and TURSO_AUTH_TOKEN must be configured',
+    );
+  }
+  return {
+    ...runtime,
+    DB: createDatabase(runtime.TURSO_DATABASE_URL, runtime.TURSO_AUTH_TOKEN),
+  } as CrashLensEnv;
 }
 
 export function isPlatformAdmin(
@@ -36,17 +47,8 @@ export function isPlatformAdmin(
   return allowed.includes(user.email.trim().toLowerCase());
 }
 
-let schemaReady: Promise<void> | null = null;
-
-export async function ensureDatabase(db: D1Database): Promise<void> {
-  schemaReady ??= db
-    .batch(schemaStatements.map((statement) => db.prepare(statement)))
-    .then(() => undefined)
-    .catch((error) => {
-      schemaReady = null;
-      throw error;
-    });
-  await schemaReady;
+export async function ensureDatabase(db: Database): Promise<void> {
+  await db.prepare('SELECT 1').first();
 }
 
 export async function authenticatedUser(request: Request) {
@@ -71,7 +73,7 @@ export async function authenticatedUser(request: Request) {
 }
 
 export async function ensureWorkspace(
-  db: D1Database,
+  db: Database,
   user: { id: string; email: string; name: string },
 ) {
   const membership = await db
@@ -100,7 +102,7 @@ export async function ensureWorkspace(
 }
 
 export async function audit(
-  db: D1Database,
+  db: Database,
   teamId: string,
   actorId: string,
   action: string,

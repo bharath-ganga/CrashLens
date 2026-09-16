@@ -8,14 +8,6 @@
   "assets": {
     "directory": "dist/client"
   },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "crashlens-production-db",
-      "database_id": "7b1dd88c-ee78-48cc-922a-f7aadeca4772",
-      "migrations_dir": "drizzle"
-    }
-  ],
   "r2_buckets": [
     {
       "binding": "FILES",

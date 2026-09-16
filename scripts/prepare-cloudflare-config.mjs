@@ -8,14 +8,7 @@ const destination = new URL(
 const config = JSON.parse(await readFile(source, 'utf8'));
 
 config.name = 'crashlens-production';
-config.d1_databases = [
-  {
-    binding: 'DB',
-    database_name: 'crashlens-production-db',
-    database_id: '7b1dd88c-ee78-48cc-922a-f7aadeca4772',
-    migrations_dir: '../../drizzle',
-  },
-];
+delete config.d1_databases;
 config.r2_buckets = [
   {
     binding: 'FILES',
