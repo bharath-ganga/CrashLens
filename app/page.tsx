@@ -80,13 +80,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
-import {
-  analyzeLogs,
-  buildReport,
-  Incident,
-  LogEntry,
-  parseLogContent,
-} from '@/lib/log-analyzer';
+import { buildReport, Incident, LogEntry } from '@/lib/log-analyzer';
 import { MAX_LOG_FILE_BYTES, MAX_LOG_FILE_MB } from '@/lib/upload-limits';
 
 const initialLogs: LogEntry[] = [];
@@ -104,6 +98,25 @@ type Workspace = {
   auditEvents: WorkspaceRow[];
   ingestionCount: number;
   capabilities: Record<string, boolean>;
+};
+type Dataset = {
+  ingestion: {
+    id: string;
+    filename: string;
+    format: string;
+    rowCount: number;
+    createdAt: string;
+  };
+  incidents: Incident[];
+  logs: LogEntry[];
+  stats: { total: number; errors: number; services: number };
+  activity: Array<{ label: string; count: number; critical: number }>;
+  services: Array<{
+    service: string;
+    events: number;
+    errors: number;
+    last_seen: string;
+  }>;
 };
 type WorkspaceView =
   | 'overview'
@@ -156,6 +169,22 @@ function rootCauseFor(incident: Incident) {
   return `${incident.trigger.replace(/[_ ](?:order|user|job)_id=.*/i, '').replace(/[.:]+$/, '')} in ${incident.service}`;
 }
 
+function incidentEvents(incident: Incident) {
+  return incident.eventCount ?? incident.logs.length;
+}
+
+function recommendedActionFor(incident: Incident) {
+  if (incident.fingerprint.endsWith(':rate-limit'))
+    return `Review the ${incident.service} rate-limit policy and identify the request IDs producing repeated 429 responses.`;
+  if (incident.fingerprint.endsWith(':video-download'))
+    return `Inspect the failed media segment requests in ${incident.service}, then verify the upstream URL and retry policy.`;
+  if (incident.fingerprint.endsWith(':url-validation'))
+    return `Review the blocked hostname and URL-validation events. Confirm they are rejected client input rather than valid traffic.`;
+  if (incident.fingerprint.endsWith(':route-not-found'))
+    return `Review the missing request paths and decide whether they are stale clients, probes, or routes that should exist.`;
+  return `Inspect the matching ${incident.service} events and their request or trace IDs. Confirm the cause before changing production.`;
+}
+
 function downloadText(content: string, filename: string) {
   const url = URL.createObjectURL(
     new Blob([content], { type: 'text/plain;charset=utf-8' }),
@@ -195,6 +224,17 @@ export default function Home() {
   const [incidentFilter, setIncidentFilter] = useState<IncidentFilter>('all');
   const [environment, setEnvironment] = useState('Production');
   const [dateRange, setDateRange] = useState('Last 24h');
+  const [datasetStats, setDatasetStats] = useState({
+    total: 0,
+    errors: 0,
+    services: 0,
+  });
+  const [datasetActivity, setDatasetActivity] = useState<Dataset['activity']>(
+    [],
+  );
+  const [datasetServices, setDatasetServices] = useState<Dataset['services']>(
+    [],
+  );
 
   const selected =
     incidents.find((incident) => incident.id === selectedId) ?? incidents[0];
@@ -213,11 +253,10 @@ export default function Home() {
       return matchesQuery && matchesStatus;
     });
   }, [incidentFilter, incidents, query, resolved]);
-  const serviceCount = new Set(logs.map((log) => log.service)).size;
-  const errorCount = logs.filter(
-    (log) => log.level === 'error' || log.level === 'fatal',
-  ).length;
+  const serviceCount = datasetStats.services;
+  const errorCount = datasetStats.errors;
   const signalBars = useMemo(() => {
+    if (datasetActivity.length) return datasetActivity;
     const buckets = new Map<string, number>();
     logs.forEach((log) => {
       const key = log.timestamp.slice(11, 16);
@@ -233,7 +272,7 @@ export default function Home() {
           (log.level === 'fatal' || log.level === 'error'),
       ).length,
     }));
-  }, [logs]);
+  }, [datasetActivity, logs]);
   const metrics: Array<{
     label: string;
     value: string | number;
@@ -257,7 +296,7 @@ export default function Home() {
     {
       label: 'Error events',
       value: errorCount,
-      note: `${logs.length} total events`,
+      note: `${datasetStats.total} total events`,
       icon: FileCode2,
     },
     {
@@ -267,40 +306,64 @@ export default function Home() {
       icon: Server,
     },
   ];
-  const loadWorkspace = useCallback(async (quiet = false) => {
-    if (!quiet) setWorkspaceBusy(true);
-    try {
-      const [workspaceResponse, healthResponse] = await Promise.all([
-        fetch('/api/workspace', { cache: 'no-store' }),
-        fetch('/api/health', { cache: 'no-store' }),
-      ]);
-      if (!workspaceResponse.ok)
-        throw new Error(
-          workspaceResponse.status === 401
-            ? 'Sign in to enable persistent team storage.'
-            : 'Workspace is temporarily unavailable.',
-        );
-      const data = (await workspaceResponse.json()) as Workspace;
-      setWorkspace(data);
-      setHistoryIncidentId(
-        (current) => current || String(data.incidents[0]?.id ?? ''),
-      );
-      if (healthResponse.ok)
-        setHealth(
-          (await healthResponse.json()) as {
-            status: string;
-            latencyMs?: number;
-          },
-        );
-      setWorkspaceMessage('Persistent workspace connected');
-    } catch (reason) {
-      setWorkspaceMessage(
-        reason instanceof Error ? reason.message : 'Workspace unavailable',
-      );
-    } finally {
-      if (!quiet) setWorkspaceBusy(false);
-    }
+  const applyDataset = useCallback((dataset: Dataset) => {
+    setLogs(dataset.logs);
+    setIncidents(dataset.incidents);
+    setSelectedId((current) =>
+      dataset.incidents.some((incident) => incident.id === current)
+        ? current
+        : (dataset.incidents[0]?.id ?? ''),
+    );
+    setFilename(dataset.ingestion.filename);
+    setDatasetStats(dataset.stats);
+    setDatasetActivity(dataset.activity);
+    setDatasetServices(dataset.services);
   }, []);
+  const loadWorkspace = useCallback(
+    async (quiet = false) => {
+      if (!quiet) setWorkspaceBusy(true);
+      try {
+        const [workspaceResponse, healthResponse, logsResponse] =
+          await Promise.all([
+            fetch('/api/workspace', { cache: 'no-store' }),
+            fetch('/api/health', { cache: 'no-store' }),
+            fetch('/api/logs', { cache: 'no-store' }),
+          ]);
+        if (!workspaceResponse.ok)
+          throw new Error(
+            workspaceResponse.status === 401
+              ? 'Sign in to enable persistent team storage.'
+              : 'Workspace is temporarily unavailable.',
+          );
+        const data = (await workspaceResponse.json()) as Workspace;
+        setWorkspace(data);
+        if (logsResponse.ok) {
+          const logData = (await logsResponse.json()) as {
+            dataset: Dataset | null;
+          };
+          if (logData.dataset) applyDataset(logData.dataset);
+        }
+        setHistoryIncidentId(
+          (current) => current || String(data.incidents[0]?.id ?? ''),
+        );
+        if (healthResponse.ok)
+          setHealth(
+            (await healthResponse.json()) as {
+              status: string;
+              latencyMs?: number;
+            },
+          );
+        setWorkspaceMessage('Persistent workspace connected');
+      } catch (reason) {
+        setWorkspaceMessage(
+          reason instanceof Error ? reason.message : 'Workspace unavailable',
+        );
+      } finally {
+        if (!quiet) setWorkspaceBusy(false);
+      }
+    },
+    [applyDataset],
+  );
 
   useEffect(() => {
     const initial = window.setTimeout(() => void loadWorkspace(), 0);
@@ -345,39 +408,24 @@ export default function Home() {
     }
     setProcessing(true);
     try {
-      const content = await file.text();
-      const parsed = parseLogContent(content, file.name);
-      const grouped = analyzeLogs(parsed);
-      if (!parsed.length) throw new Error('No readable log rows were found.');
-      if (!grouped.length)
-        throw new Error(
-          'The file was valid, but it did not contain warning or error signals.',
-        );
-      setLogs(parsed);
-      setIncidents(grouped);
-      setSelectedId(grouped[0].id);
-      setFilename(file.name);
+      const form = new FormData();
+      form.set('file', file);
+      const response = await fetch('/api/logs', {
+        method: 'POST',
+        body: form,
+      });
+      const result = (await response.json()) as {
+        dataset?: Dataset;
+        error?: string;
+      };
+      if (!response.ok || !result.dataset)
+        throw new Error(result.error ?? 'Server-side ingestion failed.');
+      applyDataset(result.dataset);
       setResolved([]);
       setUploadOpen(false);
       setTab('analysis');
-      const saved = await workspaceAction({
-        action: 'save_analysis',
-        payload: {
-          filename: file.name,
-          format: file.name.split('.').pop() ?? 'txt',
-          rowCount: parsed.length,
-          rawContent: content.slice(0, 1_000_000),
-          incidents: grouped.map((incident) => ({
-            ...incident,
-            logs: incident.logs.slice(0, 250),
-          })),
-        },
-      });
-      setWorkspaceMessage(
-        saved
-          ? 'Analysis saved to incident history'
-          : 'Analysis completed locally; persistent save failed',
-      );
+      await loadWorkspace(true);
+      setWorkspaceMessage('Logs parsed and saved by the server');
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -423,7 +471,7 @@ export default function Home() {
       user={workspace?.user}
       admin={workspace?.capabilities.platformAdmin}
       filename={filename}
-      logCount={logs.length}
+      logCount={datasetStats.total}
     >
       {error && (
         <div
@@ -654,7 +702,7 @@ export default function Home() {
                       </Badge>
                       <span className="text-right">
                         <span className="block text-xs text-foreground">
-                          {incident.logs.length}
+                          {incidentEvents(incident)}
                         </span>
                         <span className="mt-1 block text-[10px] text-destructive">
                           {incident.change}
@@ -688,8 +736,8 @@ export default function Home() {
                         {selected.title}
                       </h2>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {selected.service} · {selected.logs.length} correlated
-                        events · {dateTime(selected.started)} UTC
+                        {selected.service} · {incidentEvents(selected)}{' '}
+                        correlated events · {dateTime(selected.started)} UTC
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -762,7 +810,7 @@ export default function Home() {
                 <Card className="block py-0 border-b border-border bg-muted p-5">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-2 text-xs font-medium text-foreground">
-                      <Sparkles size={14} /> Likely root cause
+                      <Sparkles size={14} /> Evidence-based assessment
                     </div>
                     <Badge
                       variant="secondary"
@@ -775,8 +823,9 @@ export default function Home() {
                     {rootCauseFor(selected)}
                   </p>
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    CrashLens correlated service identity, event order,
-                    normalized fingerprints and nearby operational changes.
+                    Based on parsed event fields, severity, timestamps, and the
+                    normalized fingerprint. A trigger is shown only when an
+                    explicit change event exists in the source data.
                   </p>
                 </Card>
 
@@ -789,7 +838,7 @@ export default function Home() {
                     <TabsTrigger value="analysis">Investigation</TabsTrigger>
                     <TabsTrigger value="timeline">Timeline</TabsTrigger>
                     <TabsTrigger value="logs">
-                      Logs ({selected.logs.length})
+                      Logs ({incidentEvents(selected)})
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
@@ -807,7 +856,7 @@ export default function Home() {
                               Evidence
                             </h3>
                             <span className="text-xs text-muted-foreground">
-                              {selected.logs.length} correlated events
+                              {incidentEvents(selected)} correlated events
                             </span>
                           </div>
                           <div className="mt-3 space-y-2.5 text-sm text-foreground">
@@ -830,7 +879,7 @@ export default function Home() {
                                 className="mt-0.5 shrink-0 text-success"
                               />
                               <span>
-                                {selected.logs.length} events share the
+                                {incidentEvents(selected)} events share the
                                 normalized{' '}
                                 <strong className="font-medium text-foreground">
                                   {selected.fingerprint}
@@ -858,9 +907,7 @@ export default function Home() {
                             Recommended action
                           </p>
                           <p className="mt-2 text-sm leading-relaxed text-foreground">
-                            Inspect the {selected.service} dependencies and
-                            recent deployment. Check its connection pool, then
-                            roll back if the error rate continues rising.
+                            {recommendedActionFor(selected)}
                           </p>
                           <div className="mt-4 flex flex-wrap gap-2">
                             <Button
@@ -871,14 +918,18 @@ export default function Home() {
                             >
                               View related logs
                             </Button>
-                            <Button
-                              variant="ghost"
-                              type="button"
-                              onClick={() => setView('deployments')}
-                              className="rounded-none border border-border px-3 py-2 text-xs text-foreground"
-                            >
-                              View deployment
-                            </Button>
+                            {selected.timeline.some(
+                              (event) => event.type === 'deploy',
+                            ) && (
+                              <Button
+                                variant="ghost"
+                                type="button"
+                                onClick={() => setView('deployments')}
+                                className="rounded-none border border-border px-3 py-2 text-xs text-foreground"
+                              >
+                                View deployment
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -915,7 +966,7 @@ export default function Home() {
                               Incident cluster
                             </p>
                             <p className="mt-2 text-sm font-medium text-foreground">
-                              {selected.logs.length} matching failures
+                              {incidentEvents(selected)} matching events
                             </p>
                             <p className="mt-1 text-xs text-muted-foreground">
                               {selected.fingerprint}
@@ -1043,6 +1094,8 @@ export default function Home() {
           query={query}
           filename={filename}
           workspace={workspace}
+          stats={datasetStats}
+          servicesSummary={datasetServices}
           onUpload={() => setUploadOpen(true)}
         />
       ) : (
@@ -1065,8 +1118,8 @@ export default function Home() {
           <DialogHeader className="p-6 border-b">
             <DialogTitle className="text-xl">Upload log file</DialogTitle>
             <DialogDescription>
-              Find related errors and build an incident timeline. Sensitive data
-              is redacted before saving.
+              The server parses every record, computes incidents, and saves the
+              redacted source plus normalized events.
             </DialogDescription>
           </DialogHeader>
           <Input
@@ -1095,7 +1148,7 @@ export default function Home() {
                   className="mx-auto animate-spin text-foreground"
                 />
                 <span className="mt-3 block text-xs text-foreground">
-                  PARSING + CLUSTERING
+                  UPLOADING · SERVER ANALYSIS
                 </span>
               </span>
             ) : (
@@ -1134,6 +1187,8 @@ function LocalDataConsole({
   query,
   filename,
   workspace,
+  stats,
+  servicesSummary,
   onUpload,
 }: {
   view: 'overview' | 'logs' | 'services' | 'deployments' | 'settings';
@@ -1143,9 +1198,18 @@ function LocalDataConsole({
   query: string;
   filename: string;
   workspace: Workspace | null;
+  stats: Dataset['stats'];
+  servicesSummary: Dataset['services'];
   onUpload: () => void;
 }) {
   const services = useMemo(() => {
+    if (servicesSummary.length)
+      return servicesSummary.map((row) => ({
+        name: row.service,
+        events: Number(row.events),
+        errors: Number(row.errors),
+        lastSeen: row.last_seen,
+      }));
     const grouped = new Map<string, LogEntry[]>();
     logs.forEach((log) =>
       grouped.set(log.service, [...(grouped.get(log.service) ?? []), log]),
@@ -1158,7 +1222,7 @@ function LocalDataConsole({
       ).length,
       lastSeen: rows.at(-1)?.timestamp ?? '',
     }));
-  }, [logs]);
+  }, [logs, servicesSummary]);
   const visibleLogs = logs.filter((log) =>
     `${log.service} ${log.message} ${log.level}`
       .toLowerCase()
@@ -1203,7 +1267,7 @@ function LocalDataConsole({
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
               {filename
-                ? `${logs.length} events parsed from ${filename}`
+                ? `${stats.total} events parsed and persisted from ${filename}`
                 : 'No log source is connected yet.'}
             </p>
           </div>
@@ -1246,7 +1310,9 @@ function LocalDataConsole({
           <div>
             <h2 className="font-semibold">Event stream</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              {visibleLogs.length} matching log events
+              {query
+                ? `${visibleLogs.length} matches in the latest ${logs.length.toLocaleString()} loaded events`
+                : `Showing the latest ${logs.length.toLocaleString()} of ${stats.total.toLocaleString()} persisted events`}
             </p>
           </div>
           <Button

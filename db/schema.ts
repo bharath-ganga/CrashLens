@@ -37,6 +37,19 @@ export const schemaStatements = [
     created_by TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
+  `CREATE TABLE IF NOT EXISTS log_entries (
+    id TEXT PRIMARY KEY,
+    team_id TEXT NOT NULL,
+    ingestion_id TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    level TEXT NOT NULL,
+    service TEXT NOT NULL,
+    event_name TEXT,
+    message TEXT NOT NULL,
+    raw_redacted TEXT NOT NULL,
+    request_id TEXT,
+    trace_id TEXT
+  )`,
   `CREATE TABLE IF NOT EXISTS incidents (
     id TEXT PRIMARY KEY,
     team_id TEXT NOT NULL,
@@ -54,7 +67,9 @@ export const schemaStatements = [
     assigned_to TEXT,
     created_by TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    timeline_json TEXT NOT NULL DEFAULT '[]',
+    change_text TEXT NOT NULL DEFAULT '+1 event'
   )`,
   `CREATE TABLE IF NOT EXISTS incident_logs (
     id TEXT PRIMARY KEY,
@@ -149,6 +164,8 @@ export const schemaStatements = [
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`,
   `CREATE INDEX IF NOT EXISTS idx_incidents_team_updated ON incidents(team_id, updated_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS idx_log_entries_ingestion_time ON log_entries(ingestion_id, timestamp)`,
+  `CREATE INDEX IF NOT EXISTS idx_log_entries_team_service ON log_entries(team_id, service, timestamp)`,
   `CREATE INDEX IF NOT EXISTS idx_incidents_team_status ON incidents(team_id, status)`,
   `CREATE INDEX IF NOT EXISTS idx_incident_logs_incident ON incident_logs(incident_id, timestamp)`,
   `CREATE INDEX IF NOT EXISTS idx_comments_incident ON comments(incident_id, created_at)`,

@@ -7,6 +7,9 @@ export type LogEntry = {
   service: string;
   message: string;
   raw: string;
+  eventName?: string;
+  requestId?: string;
+  traceId?: string;
 };
 
 export type TimelineEvent = {
@@ -22,6 +25,7 @@ export type Incident = {
   title: string;
   service: string;
   logs: LogEntry[];
+  eventCount?: number;
   severity: 'critical' | 'warning' | 'info';
   status: 'Investigating' | 'Monitoring';
   started: string;
@@ -102,13 +106,24 @@ function fromRecord(
     record.application ??
     record.component ??
     record.source;
+  const nestedError =
+    record.error && typeof record.error === 'object'
+      ? (record.error as Record<string, unknown>)
+      : null;
+  const eventName = stringValue(record.event).trim();
+  const ordinaryMessage = stringValue(record.message ?? record.msg).trim();
+  const errorCode = stringValue(nestedError?.code).trim();
+  const errorMessage = stringValue(nestedError?.message).trim();
   const message =
-    record.message ??
-    record.msg ??
-    record.error ??
-    record.event ??
-    record.description ??
-    raw;
+    errorMessage &&
+    (!ordinaryMessage ||
+      /^(operational )?error occurred$/i.test(ordinaryMessage))
+      ? `${errorCode ? `[${errorCode}] ` : ''}${errorMessage}`
+      : ordinaryMessage ||
+        errorMessage ||
+        stringValue(record.description).trim() ||
+        eventName ||
+        raw;
   return {
     id: `log-${index + 1}`,
     timestamp: validTimestamp(timestamp, index),
@@ -116,7 +131,34 @@ function fromRecord(
     service: cleanService(service),
     message: stringValue(message).trim(),
     raw,
+    eventName: eventName || undefined,
+    requestId:
+      stringValue(
+        record.requestId ?? record.request_id ?? record.correlation,
+      ).trim() || undefined,
+    traceId:
+      stringValue(
+        record.traceId ?? record.trace_id ?? record.otel_trace_id,
+      ).trim() || undefined,
   };
+}
+
+function parseJsonLines(content: string): LogEntry[] {
+  return content
+    .split(/\r?\n/)
+    .filter((line) => line.trim())
+    .map((line, index) => {
+      try {
+        const record = JSON.parse(line) as unknown;
+        if (!record || typeof record !== 'object' || Array.isArray(record))
+          throw new Error('not an object');
+        return fromRecord(record as Record<string, unknown>, line, index);
+      } catch {
+        throw new Error(
+          `Invalid JSON on line ${index + 1}. Each JSONL line must be one JSON object.`,
+        );
+      }
+    });
 }
 
 function parseCsvRows(content: string): string[][] {
@@ -197,23 +239,15 @@ export function parseLogContent(content: string, filename: string): LogEntry[] {
       return fromRecord(record, row.join(','), index);
     });
   } else if (extension === 'jsonl' || extension === 'ndjson') {
-    entries = content
-      .split(/\r?\n/)
-      .filter(Boolean)
-      .map((line, index) => {
-        try {
-          return fromRecord(JSON.parse(line), line, index);
-        } catch {
-          throw new Error(
-            `Invalid JSON on line ${index + 1}. Each JSONL line must be one JSON object.`,
-          );
-        }
-      });
+    entries = parseJsonLines(content);
   } else if (extension === 'txt' || extension === 'log') {
-    entries = content
-      .split(/\r?\n/)
-      .filter((line) => line.trim())
-      .map(parseTextLine);
+    const firstLine = content.split(/\r?\n/).find((line) => line.trim()) ?? '';
+    entries = firstLine.trimStart().startsWith('{')
+      ? parseJsonLines(content)
+      : content
+          .split(/\r?\n/)
+          .filter((line) => line.trim())
+          .map(parseTextLine);
   } else {
     throw new Error(
       'Unsupported file type. Use .txt, .log, .csv, .jsonl, or .ndjson.',
@@ -225,8 +259,19 @@ export function parseLogContent(content: string, filename: string): LogEntry[] {
     .sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
 }
 
-function categoryFor(message: string): string {
-  const text = message.toLowerCase();
+function categoryFor(entry: Pick<LogEntry, 'message' | 'eventName'>): string {
+  const text = `${entry.eventName ?? ''} ${entry.message}`.toLowerCase();
+  if (
+    /video\.download|failed to fetch segment|video download failed/.test(text)
+  )
+    return 'video-download';
+  if (
+    /url_validation|unauthorized hostname|invalid url|blocked host/.test(text)
+  )
+    return 'url-validation';
+  if (/route_not_found|route not found/.test(text)) return 'route-not-found';
+  if (/download_not_found|progress\.not_found|unknown download/.test(text))
+    return 'download-not-found';
   if (/slo.*checkout|checkout.*slo/.test(text)) return 'checkout-slo';
   if (/payment.*fail|checkout.*fail|transaction.*declin/.test(text))
     return 'payment-failure';
@@ -266,6 +311,10 @@ function titleFor(category: string): string {
     authentication: 'Authentication failures',
     memory: 'Memory pressure failures',
     'rate-limit': 'Rate limit errors',
+    'video-download': 'Video download failures',
+    'url-validation': 'Blocked URL validation attempts',
+    'route-not-found': 'Unknown route requests',
+    'download-not-found': 'Unknown download requests',
     deployment: 'Deployment errors',
     latency: 'Elevated service latency',
   };
@@ -309,11 +358,13 @@ export function analyzeLogs(entries: LogEntry[]): Incident[] {
   const candidates = entries.filter(
     (entry) =>
       levelOrder[entry.level] >= 2 ||
-      /fail|error|exception|timeout|refused|latency|alert/i.test(entry.message),
+      /fail|error|exception|timeout|refused|latency|alert/i.test(
+        `${entry.eventName ?? ''} ${entry.message}`,
+      ),
   );
   const groups = new Map<string, LogEntry[]>();
   candidates.forEach((entry) => {
-    const category = categoryFor(entry.message);
+    const category = categoryFor(entry);
     if (category === 'deployment') return;
     const key = `${entry.service}|${category}`;
     groups.set(key, [...(groups.get(key) ?? []), entry]);
@@ -329,7 +380,9 @@ export function analyzeLogs(entries: LogEntry[]): Incident[] {
           delta >= -30 * 60_000 &&
           delta <= 15 * 60_000 &&
           (entry.service === service ||
-            /alert|deploy|latency|database|connection/i.test(entry.message))
+            /alert|deploy|latency|database|connection/i.test(
+              `${entry.eventName ?? ''} ${entry.message}`,
+            ))
         );
       });
       const triggerLog = [...nearby]
@@ -337,8 +390,8 @@ export function analyzeLogs(entries: LogEntry[]): Incident[] {
         .find(
           (entry) =>
             Date.parse(entry.timestamp) <= startMs &&
-            /deploy|release|config|migration|failover|connection|memory/i.test(
-              entry.message,
+            /deploy|release|config(?:uration)? change|migration|failover/i.test(
+              `${entry.eventName ?? ''} ${entry.message}`,
             ),
         );
       const trigger = triggerLog
@@ -359,8 +412,7 @@ export function analyzeLogs(entries: LogEntry[]): Incident[] {
         .filter(
           (entry, entryIndex, all) =>
             entryIndex === 0 ||
-            categoryFor(entry.message) !==
-              categoryFor(all[entryIndex - 1].message),
+            categoryFor(entry) !== categoryFor(all[entryIndex - 1]),
         )
         .slice(-7);
       const timeline = uniqueTimeline.map((entry) => {
@@ -386,10 +438,7 @@ export function analyzeLogs(entries: LogEntry[]): Incident[] {
         status: severity === 'critical' ? 'Investigating' : 'Monitoring',
         started: logs[0].timestamp,
         lastSeen: logs[logs.length - 1].timestamp,
-        change:
-          logs.length > 1
-            ? `+${Math.min(999, 38 + logs.length * 41)}%`
-            : '+1 event',
+        change: `${logs.length} event${logs.length === 1 ? '' : 's'}`,
         trigger,
         confidence,
         fingerprint,

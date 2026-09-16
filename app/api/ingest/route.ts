@@ -55,6 +55,7 @@ export async function POST(request: Request) {
     filename: `${body.source ?? 'webhook'}-${Date.now()}.jsonl`,
     format: 'webhook',
     rowCount: logs.length,
+    logs,
     incidents,
   });
   return Response.json(

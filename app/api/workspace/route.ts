@@ -6,7 +6,6 @@ import {
   getRuntimeEnv,
   isPlatformAdmin,
 } from '@/db/runtime';
-import { saveAnalysis } from '@/db/incidents';
 import { emailConfigured, queueEmail, flushEmails } from '@/db/email';
 import {
   MAX_LOG_FILE_MB,
@@ -121,16 +120,13 @@ export async function POST(request: Request) {
   const action = textValue(body.action);
 
   if (action === 'save_analysis') {
-    const payload = body.payload as Parameters<typeof saveAnalysis>[3];
-    if (!payload?.filename || !Array.isArray(payload.incidents))
-      return json({ error: 'Invalid analysis payload' }, 400);
-    const ingestionId = await saveAnalysis(
-      ctx.runtime,
-      ctx.teamId,
-      ctx.user.id,
-      payload,
+    return json(
+      {
+        error:
+          'Browser-computed analysis is no longer accepted. Upload the source file to /api/logs.',
+      },
+      410,
     );
-    return json({ ok: true, ingestionId }, 201);
   }
   if (action === 'update_incident') {
     const incidentId = textValue(body.incidentId);
