@@ -48,7 +48,7 @@ CrashLens treats correlations as investigation evidence—not proof of a root ca
 
 ### Incident investigation
 
-- Upload `.txt`, `.log`, `.csv`, `.jsonl`, or `.ndjson` files up to 5 MB.
+- Upload `.txt`, `.log`, `.csv`, `.jsonl`, or `.ndjson` files up to 50 MB.
 - Parse and normalize timestamps, severity levels, service names, and messages.
 - Redact common credentials and sensitive values before persistence.
 - Group repeated errors using stable fingerprints.

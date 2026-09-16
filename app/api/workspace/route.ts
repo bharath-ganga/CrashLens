@@ -8,6 +8,10 @@ import {
 } from '@/db/runtime';
 import { saveAnalysis } from '@/db/incidents';
 import { emailConfigured, queueEmail, flushEmails } from '@/db/email';
+import {
+  MAX_LOG_FILE_MB,
+  MAX_WORKSPACE_PAYLOAD_BYTES,
+} from '@/lib/upload-limits';
 
 export const dynamic = 'force-dynamic';
 
@@ -111,8 +115,8 @@ export async function POST(request: Request) {
   const ctx = await context(request);
   if (!ctx) return json({ error: 'Authentication required' }, 401);
   const contentLength = Number(request.headers.get('content-length') ?? 0);
-  if (contentLength > 6 * 1024 * 1024)
-    return json({ error: 'Payload exceeds 6 MB' }, 413);
+  if (contentLength > MAX_WORKSPACE_PAYLOAD_BYTES)
+    return json({ error: `Payload exceeds ${MAX_LOG_FILE_MB} MB` }, 413);
   const body = (await request.json()) as Record<string, unknown>;
   const action = textValue(body.action);
 

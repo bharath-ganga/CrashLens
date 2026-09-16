@@ -87,6 +87,7 @@ import {
   LogEntry,
   parseLogContent,
 } from '@/lib/log-analyzer';
+import { MAX_LOG_FILE_BYTES, MAX_LOG_FILE_MB } from '@/lib/upload-limits';
 
 const initialLogs: LogEntry[] = [];
 const initialIncidents: Incident[] = [];
@@ -336,8 +337,10 @@ export default function Home() {
 
   async function processFile(file: File) {
     setError('');
-    if (file.size > 5 * 1024 * 1024) {
-      setError('File is larger than 5 MB. Split it into a smaller file first.');
+    if (file.size > MAX_LOG_FILE_BYTES) {
+      setError(
+        `File is larger than ${MAX_LOG_FILE_MB} MB. Split it into a smaller file first.`,
+      );
       return;
     }
     setProcessing(true);
@@ -1102,7 +1105,7 @@ export default function Home() {
                   Drop a file here or click to browse
                 </span>
                 <span className="mt-2 block text-xs text-muted-foreground">
-                  TXT · LOG · CSV · JSONL · NDJSON / MAX 5 MB
+                  TXT · LOG · CSV · JSONL · NDJSON / MAX {MAX_LOG_FILE_MB} MB
                 </span>
               </span>
             )}
