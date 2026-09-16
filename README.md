@@ -9,7 +9,14 @@ CrashLens collects application logs and telemetry, removes common sensitive valu
 3. Did a recent deployment contribute?
 4. What should the team investigate next?
 
-> The hosted application is currently owner-private. Run the project locally to explore every feature.
+## Live deployments
+
+| Environment | URL | Access |
+| --- | --- | --- |
+| Cloudflare production | [crashlens-production.bharathganga7.workers.dev](https://crashlens-production.bharathganga7.workers.dev/) | Public application; a CrashLens account is required for workspace data |
+| OpenAI Sites preview | [crashlens.bharathganga7.chatgpt.site](https://crashlens.bharathganga7.chatgpt.site/) | Owner-private preview deployment |
+
+The Cloudflare deployment is the primary live application. The Sites deployment is kept private for owner testing.
 
 ## Highlights
 
@@ -27,19 +34,20 @@ CrashLens collects application logs and telemetry, removes common sensitive valu
 ## How it works
 
 ```text
-Logs / OpenTelemetry / uptime checks / deployment events
-                         │
-                         ▼
-              Normalize and redact data
-                         │
-                         ▼
-             Group related failure signals
-                         │
-                         ▼
-       Correlate traces, changes, and error spikes
-                         │
-                         ▼
-       Incident timeline, alerts, and postmortem
+Log files / API logs / OpenTelemetry / uptime checks / deployments
+                              │
+                              ▼
+                    Cloudflare Worker APIs
+                              │
+                    parse, normalize, redact
+                              │
+                 ┌────────────┴────────────┐
+                 ▼                         ▼
+        Cloudflare D1                Cloudflare R2
+   normalized events, incidents    redacted source files
+                 └────────────┬────────────┘
+                              ▼
+            timelines, correlations, alerts, reports
 ```
 
 CrashLens treats correlations as investigation evidence—not proof of a root cause. An engineer must confirm the final conclusion.
@@ -49,8 +57,10 @@ CrashLens treats correlations as investigation evidence—not proof of a root ca
 ### Incident investigation
 
 - Upload `.txt`, `.log`, `.csv`, `.jsonl`, or `.ndjson` files up to 50 MB.
-- Parse and normalize timestamps, severity levels, service names, and messages.
-- Redact common credentials and sensitive values before persistence.
+- Parse files on the server and normalize timestamps, severity levels, service names, and messages.
+- Redact common credentials and sensitive values before storing anything.
+- Persist normalized log entries and generated incidents in D1, and retain the redacted source file in R2.
+- Reload previous investigations from the authenticated workspace instead of relying on browser memory.
 - Group repeated errors using stable fingerprints.
 - Build a chronological timeline for each incident.
 - Assign incidents, add comments, and move them through investigating, monitoring, and resolved states.
@@ -87,14 +97,52 @@ CrashLens treats correlations as investigation evidence—not proof of a root ca
 
 ## Technology stack
 
-- **Frontend:** React 19, TypeScript, Tailwind CSS, Recharts, Lucide icons
-- **Application framework:** vinext
-- **Runtime:** Cloudflare Workers
-- **Database:** Cloudflare D1 / SQLite
-- **Object storage:** Cloudflare R2
-- **Email:** Resend
-- **Hosting:** OpenAI Sites
-- **Quality:** Node test runner, oxlint, TypeScript, oxfmt
+| Layer | Technology | Purpose |
+| --- | --- | --- |
+| UI | React 19, TypeScript, Tailwind CSS v4, shadcn-style components, Base UI, Lucide | Responsive dashboard, forms, navigation, themes, and accessible controls |
+| Charts | Recharts | Incident activity, uptime, latency, and reliability visualization |
+| Framework and build | vinext, Vite | React application routing, server rendering, API routes, and production bundles |
+| Runtime | Cloudflare Workers with Node.js compatibility | Server-side authentication, ingestion, analysis, monitoring, and APIs |
+| Relational storage | Cloudflare D1 / SQLite | Accounts, teams, logs, incidents, traces, deployments, monitors, notes, and audit history |
+| Object storage | Cloudflare R2 | Private storage for redacted uploaded source files |
+| Authentication | CrashLens accounts, PBKDF2 password hashing, HTTP-only sessions | Account registration, sign-in, password recovery, and protected workspaces |
+| Email and alerts | Resend, Slack, PagerDuty, signed webhooks | Security emails and incident lifecycle notifications |
+| Intelligence | Deterministic parsing and correlation with optional OpenAI assistance | Fingerprinting, anomaly detection, deployment correlation, and investigation summaries |
+| Hosting | Cloudflare Workers and OpenAI Sites | Production deployment and owner-private preview |
+| Quality | Node test runner, TypeScript, oxlint, oxfmt | Automated tests, type safety, linting, and formatting |
+
+## Project structure
+
+```text
+CrashLens/
+├── app/                       React pages and server API route handlers
+│   ├── api/logs/              Multipart file ingestion and persisted-log APIs
+│   ├── api/account/           Registration, login, sessions, and password recovery
+│   ├── api/workspace/         Incidents, collaboration, settings, and workspace data
+│   ├── api/telemetry/         Trace and OpenTelemetry ingestion
+│   ├── api/deployments/       Deployment event ingestion and correlation
+│   ├── api/monitors/          Uptime monitor configuration and results
+│   └── api/monitor-tick/      Scheduled monitor execution endpoint
+├── components/                Application shell and reusable UI components
+├── db/                        D1 queries for auth, logs, incidents, monitors, and teams
+├── drizzle/                   Immutable D1 schema migrations
+├── lib/                       Parsers, analyzers, redaction, security, and uptime logic
+├── scripts/                   Migration, deployment, monitoring, and integration scripts
+├── tests/                     Node-based unit and security tests
+├── public/                    Static assets and social preview image
+├── .openai/hosting.json       OpenAI Sites project configuration
+├── wrangler.production.jsonc  Cloudflare Worker, D1, and R2 bindings
+└── package.json               Commands and dependencies
+```
+
+### Persistence model
+
+| Data | Storage | Notes |
+| --- | --- | --- |
+| Uploaded source file | R2 | Stored privately after secrets and sensitive fields are redacted |
+| Normalized log events | D1 | Parsed server-side and linked to an ingestion run and workspace |
+| Incidents and evidence | D1 | Fingerprints, timelines, related logs, severity, assignments, and status |
+| Operational data | D1 | Accounts, teams, comments, monitors, telemetry, deployments, SLOs, and postmortems |
 
 ## Local setup
 
@@ -129,7 +177,7 @@ The production Worker uses these resources:
 - Worker: `crashlens-production`
 - D1 database: `crashlens-production-db` with binding `DB`
 - Private R2 bucket: `crashlens-production-files` with binding `FILES`
-- Live application: `https://crashlens-production.bharathganga7.workers.dev`
+- Live application: [crashlens-production.bharathganga7.workers.dev](https://crashlens-production.bharathganga7.workers.dev/)
 
 Authenticate Wrangler, apply the committed migrations, and deploy:
 
@@ -176,9 +224,9 @@ Never commit `.dev.vars`, API keys, database URLs, or webhook secrets.
 
 1. Open CrashLens and select **Upload source**.
 2. Upload a log export from your application or observability provider.
-3. Open the generated incident.
-4. Review the analysis, timeline, related logs, and possible trigger.
-5. Save the analysis to your authenticated workspace.
+3. Wait while the Worker parses, redacts, fingerprints, and persists the file server-side.
+4. Open a generated incident and review its timeline, related logs, evidence, and possible trigger.
+5. Refresh or sign in again to confirm the investigation is still available from D1 and R2.
 
 ### Test production intelligence
 
@@ -303,6 +351,8 @@ Committed migrations live in [`drizzle`](./drizzle):
 - `0003_accounts.sql` — separate CrashLens accounts and sessions
 - `0004_uptime_control.sql` — projects, advanced checks, regions, and evidence
 - `0005_production_intelligence.sql` — traces, deployments, SLOs, and postmortems
+- `0006_remove_demo_data.sql` — removes legacy seeded demonstration records
+- `0007_persistent_server_ingestion.sql` — persists ingestion runs and normalized server-parsed logs
 
 Sites applies committed migrations during publishing. For local development, use `node scripts/migrate-local.mjs` after the local emulator has been created.
 
@@ -329,11 +379,11 @@ The integration script creates disposable local fixtures and removes only those 
 - Automatic monitoring requires a reachable external scheduler.
 - True multi-region consensus requires runners deployed in multiple regions.
 - Email delivery and third-party alerts require separately configured provider credentials.
-- The hosted application remains private until its access policy is intentionally changed.
+- The OpenAI Sites preview remains owner-private; the Cloudflare production URL is public and protects workspace data with application authentication.
 
 ## Resume summary
 
-> Built CrashLens, a full-stack production observability platform using React, TypeScript, Cloudflare Workers, D1, R2, and Resend. Implemented secure authentication, log clustering, distributed tracing, deployment correlation, SLO/error-budget tracking, uptime monitoring, multi-channel alerts, team collaboration, and automated postmortem generation.
+> Built CrashLens, a full-stack production observability platform using React, TypeScript, Cloudflare Workers, D1, R2, and Resend. Implemented server-side log ingestion and persistence, secure authentication, incident clustering, distributed tracing, deployment correlation, SLO/error-budget tracking, uptime monitoring, multi-channel alerts, team collaboration, and automated postmortem generation.
 
 ## License
 
