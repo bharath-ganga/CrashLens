@@ -7,6 +7,9 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Activity, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+
+const ACCOUNT_REQUEST_TIMEOUT_MS = 20_000;
+
 export default function AccountPage() {
   const [mode, setMode] = useState('login');
   const [token, setToken] = useState('');
@@ -63,7 +66,7 @@ export default function AccountPage() {
     try {
       const response = await fetch('/api/account', {
         method: 'POST',
-        signal: AbortSignal.timeout(20000),
+        signal: AbortSignal.timeout(ACCOUNT_REQUEST_TIMEOUT_MS),
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: mode,
@@ -87,7 +90,7 @@ export default function AccountPage() {
     } catch (e) {
       setError(
         e instanceof DOMException && e.name === 'TimeoutError'
-          ? 'The request took too long. Please try again.'
+          ? 'The request took too long. Check your connection, then try again.'
           : e instanceof Error
             ? e.message
             : 'Request failed',
