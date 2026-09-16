@@ -122,6 +122,27 @@ node scripts/migrate-local.mjs
 
 Restart the development server after changing `.dev.vars`.
 
+## Cloudflare deployment
+
+The production Worker uses these resources:
+
+- Worker: `crashlens-production`
+- D1 database: `crashlens-production-db` with binding `DB`
+- Private R2 bucket: `crashlens-production-files` with binding `FILES`
+- Live application: `https://crashlens-production.bharathganga7.workers.dev`
+
+Authenticate Wrangler, apply the committed migrations, and deploy:
+
+```bash
+npx wrangler login
+npm run migrate:cloudflare
+npm run deploy:cloudflare
+```
+
+Add production credentials with `npx wrangler secret put VARIABLE_NAME`. Set `APP_ORIGIN` to the final `https://...workers.dev` or custom-domain origin. Do not upload the local `.dev.vars` file unchanged because its origin may point to localhost.
+
+The browser calls APIs on the same Worker origin, so separate browser CORS rules are not required. R2 remains private and is accessed through the Worker's `FILES` binding; no public bucket URL or R2 CORS policy is needed.
+
 ## Environment configuration
 
 Copy the example file and add only the values you need:

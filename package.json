@@ -9,6 +9,8 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "start": "wrangler dev --config dist/server/wrangler.json",
+    "deploy:cloudflare": "npm run build && node scripts/prepare-cloudflare-config.mjs && wrangler deploy --config dist/server/wrangler.production.json",
+    "migrate:cloudflare": "wrangler d1 migrations apply DB --remote --config wrangler.production.jsonc",
     "lint": "oxlint app db lib tests",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "format": "oxfmt"
