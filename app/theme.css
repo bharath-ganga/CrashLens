@@ -1,0 +1,121 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--background);
+  --color-popover-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--muted);
+  --color-secondary-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--muted);
+  --color-accent-foreground: var(--foreground);
+  --color-destructive: #b42318;
+  --color-success: #23744c;
+  --color-warning: #94620b;
+  --color-border: var(--border);
+  --color-input: var(--border);
+  --color-ring: #737373;
+  --color-sidebar: #fafafa;
+  --color-sidebar-foreground: var(--foreground);
+  --color-sidebar-primary: var(--primary);
+  --color-sidebar-primary-foreground: #ffffff;
+  --color-sidebar-accent: #eaeaea;
+  --color-sidebar-accent-foreground: #171717;
+  --color-sidebar-border: var(--border);
+  --color-sidebar-ring: #737373;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --font-sans: var(--font-geist-sans), 'Segoe UI', sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+}
+:root {
+  color-scheme: light;
+  --background: #ffffff;
+  --foreground: #171717;
+  --card: #ffffff;
+  --primary: #171717;
+  --muted: #f5f5f5;
+  --muted-foreground: #737373;
+  --border: #e5e5e5;
+  --radius: 0;
+}
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: var(--border);
+  }
+  html {
+    background: var(--background);
+  }
+  body {
+    margin: 0;
+    color: var(--foreground);
+    background: var(--background);
+    font-family: var(--font-geist-sans), 'Segoe UI', sans-serif;
+  }
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']) {
+    cursor: pointer;
+  }
+  ::selection {
+    background: #d4d4d4;
+    color: #171717;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #d4d4d4 transparent;
+  }
+}
+[data-slot='dialog-overlay'],
+[data-slot='sheet-overlay'] {
+  backdrop-filter: none;
+  background: rgb(0 0 0 / 40%);
+}
+[data-slot='dialog-content'] {
+  max-height: calc(100dvh - 3rem);
+  overflow-y: auto;
+}
+[data-slot='card'] {
+  box-shadow: none;
+  border: 1px solid var(--border);
+  gap: 0;
+}
+[data-slot='label']:not(.flex):has(input),
+[data-slot='label']:not(.flex):has(textarea),
+[data-slot='label']:not(.flex):has(select) {
+  display: block;
+  line-height: 1.5;
+}
+[data-slot='label']:not(.flex)
+  > :is(
+    [data-slot='input'],
+    [data-slot='textarea'],
+    [data-slot='native-select-wrapper']
+  ) {
+  margin-top: 0.5rem;
+}
+[data-slot='table-head'] {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+[data-slot='table-cell'] {
+  font-size: 0.8125rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

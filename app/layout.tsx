@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import './globals.css';
+import './theme.css';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -14,11 +14,19 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'CrashLens — Intelligent incident investigation',
-  description: 'AI-powered production error clustering, root-cause analysis, and incident timelines.',
+  description:
+    'AI-powered production error clustering, root-cause analysis, and incident timelines.',
   openGraph: {
     title: 'CrashLens — Intelligent incident investigation',
     description: 'See the cause. Fix it faster.',
-    images: [{ url: '/og.png', width: 1200, height: 630, alt: 'CrashLens — See the cause. Fix it faster.' }],
+    images: [
+      {
+        url: '/og.png',
+        width: 1200,
+        height: 630,
+        alt: 'CrashLens — See the cause. Fix it faster.',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',

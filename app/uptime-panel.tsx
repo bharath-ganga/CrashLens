@@ -1,4 +1,20 @@
 'use client';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from '@/components/ui/native-select';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
 import { useCallback, useEffect, useState } from 'react';
 import {
   AlertTriangle,
@@ -13,15 +29,19 @@ import {
   Settings2,
   Trash2,
 } from 'lucide-react';
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts';
 import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 type Row = Record<string, string | number | null>;
 type Data = {
   now: number;
@@ -37,9 +57,9 @@ type Data = {
   error?: string;
 };
 const field =
-  'w-full border border-[#2D3442] bg-[#090B0F] px-3 py-2.5 text-sm text-[#F4F7FB] outline-none focus:border-[#7C6CFF]';
+  'w-full border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:border-foreground';
 const button =
-  'inline-flex items-center justify-center gap-2 border border-[#545454] bg-[#171C26] px-3 py-2 text-sm font-semibold hover:bg-[#1C2130] disabled:cursor-not-allowed disabled:opacity-40';
+  'inline-flex items-center justify-center gap-2 border border-border bg-muted px-3 py-2 text-sm font-semibold hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40';
 const empty: Data = {
   now: 0,
   projects: [],
@@ -106,67 +126,67 @@ function Form({
   return (
     <form
       onSubmit={submit}
-      className="border-t border-[#232936] bg-[#11151D] p-5"
+      className="border-t border-border bg-background p-5"
     >
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <label className="text-sm">
+        <Label className="text-sm">
           Monitor name
-          <input
+          <Input
             className={field}
             name="name"
             defaultValue={val('name')}
             required
           />
-        </label>
-        <label className="text-sm">
+        </Label>
+        <Label className="text-sm">
           Service ID
-          <input
+          <Input
             className={field}
             name="service"
             defaultValue={val('service')}
             placeholder="payment-service"
             required
           />
-        </label>
-        <label className="text-sm md:col-span-2">
+        </Label>
+        <Label className="text-sm md:col-span-2">
           Public HTTPS endpoint
-          <input
+          <Input
             className={field}
             name="url"
             type="url"
             defaultValue={val('url', 'https://')}
             required
           />
-        </label>
-        <label className="text-sm">
+        </Label>
+        <Label className="text-sm">
           Project
-          <select
+          <NativeSelect
             className={field}
             name="projectId"
             defaultValue={val('project_id', String(projects[0]?.id ?? ''))}
           >
             {projects.map((p) => (
-              <option key={String(p.id)} value={String(p.id)}>
+              <NativeSelectOption key={String(p.id)} value={String(p.id)}>
                 {p.name}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
-        </label>
-        <label className="text-sm">
+          </NativeSelect>
+        </Label>
+        <Label className="text-sm">
           Method
-          <select
+          <NativeSelect
             className={field}
             name="method"
             defaultValue={val('method', 'HEAD')}
           >
             {['HEAD', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map((v) => (
-              <option key={v}>{v}</option>
+              <NativeSelectOption key={v}>{v}</NativeSelectOption>
             ))}
-          </select>
-        </label>
-        <label className="text-sm">
+          </NativeSelect>
+        </Label>
+        <Label className="text-sm">
           Interval
-          <select
+          <NativeSelect
             className={field}
             name="interval"
             defaultValue={val('interval_seconds', '300')}
@@ -179,15 +199,15 @@ function Form({
               [1800, '30 minutes'],
               [3600, '1 hour'],
             ].map(([v, l]) => (
-              <option key={v} value={v}>
+              <NativeSelectOption key={v} value={v}>
                 {l}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
-        </label>
-        <label className="text-sm">
+          </NativeSelect>
+        </Label>
+        <Label className="text-sm">
           Timeout (ms)
-          <input
+          <Input
             className={field}
             name="timeout"
             type="number"
@@ -195,10 +215,10 @@ function Form({
             max="30000"
             defaultValue={val('timeout_ms', '10000')}
           />
-        </label>
-        <label className="text-sm">
+        </Label>
+        <Label className="text-sm">
           Minimum status
-          <input
+          <Input
             className={field}
             name="expectedMin"
             type="number"
@@ -206,10 +226,10 @@ function Form({
             max="599"
             defaultValue={val('expected_min', '200')}
           />
-        </label>
-        <label className="text-sm">
+        </Label>
+        <Label className="text-sm">
           Maximum status
-          <input
+          <Input
             className={field}
             name="expectedMax"
             type="number"
@@ -217,48 +237,48 @@ function Form({
             max="599"
             defaultValue={val('expected_max', '299')}
           />
-        </label>
-        <label className="text-sm">
+        </Label>
+        <Label className="text-sm">
           Body assertion
-          <select
+          <NativeSelect
             className={field}
             name="assertionType"
             defaultValue={val('assertion_type', 'none')}
           >
             {['none', 'contains', 'exact', 'regex'].map((v) => (
-              <option key={v}>{v}</option>
+              <NativeSelectOption key={v}>{v}</NativeSelectOption>
             ))}
-          </select>
-        </label>
-        <label className="text-sm">
+          </NativeSelect>
+        </Label>
+        <Label className="text-sm">
           Assertion value
-          <input
+          <Input
             className={field}
             name="assertionValue"
             defaultValue={val('assertion_value')}
           />
-        </label>
-        <label className="text-sm md:col-span-2">
+        </Label>
+        <Label className="text-sm md:col-span-2">
           Request headers JSON
-          <textarea
+          <Textarea
             className={field}
             rows={2}
             name="headers"
             defaultValue={val('request_headers_json', '{}')}
           />
-        </label>
-        <label className="text-sm md:col-span-2">
+        </Label>
+        <Label className="text-sm md:col-span-2">
           Request body
-          <textarea
+          <Textarea
             className={field}
             rows={2}
             name="requestBody"
             defaultValue={val('request_body')}
           />
-        </label>
-        <label className="text-sm md:col-span-2">
+        </Label>
+        <Label className="text-sm md:col-span-2">
           Tags, comma separated
-          <input
+          <Input
             className={field}
             name="tags"
             defaultValue={
@@ -268,25 +288,32 @@ function Form({
             }
             placeholder="api, production, checkout"
           />
-        </label>
+        </Label>
       </div>
       {error && (
-        <p className="mt-4 border border-[#ff5757] p-3 text-sm text-[#FF6B79]">
+        <p className="mt-4 border border-destructive p-3 text-sm text-destructive">
           {error}
         </p>
       )}
       <div className="mt-4 flex gap-3">
-        <button
+        <Button
+          variant="default"
+          type="submit"
           disabled={busy}
-          className="bg-[#7C6CFF] px-5 py-2.5 font-bold text-[#080808]"
+          className="bg-primary px-5 py-2.5 font-bold text-primary-foreground"
         >
           {busy ? 'Saving…' : monitor ? 'Save monitor' : 'Create monitor'}
-        </button>
-        <button type="button" className={button} onClick={onDone}>
+        </Button>
+        <Button
+          variant="ghost"
+          type="button"
+          className={button}
+          onClick={onDone}
+        >
           Cancel
-        </button>
+        </Button>
       </div>
-      <p className="mt-3 text-xs text-[#a8a8a8]">
+      <p className="mt-3 text-xs text-muted-foreground">
         Secret headers such as Authorization and Cookie are blocked. Redirects
         and private-network destinations are never followed.
       </p>
@@ -386,26 +413,25 @@ export default function UptimePanel() {
   );
   if (loading)
     return (
-      <section className="border border-[#232936] bg-[#0D1017] p-8">
+      <section className="border border-border bg-muted p-8">
         Loading monitor control…
       </section>
     );
   return (
-    <section className="overflow-hidden border border-[#232936] bg-[#0D1017] text-[#F4F7FB]">
-      <header className="border-b border-[#232936] bg-[#171C26] p-5">
+    <section className="overflow-hidden border border-border bg-background text-foreground">
+      <header className="border-b border-border bg-background p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="font-mono text-xs tracking-[.2em] text-[#7C6CFF]">
-              UPTIME CONTROL
-            </p>
-            <h2 className="mt-2 text-2xl font-bold">Endpoint monitoring</h2>
-            <p className="mt-1 text-sm text-[#8B95A7]">
+            <h2 className="text-lg font-semibold">Monitor overview</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
               Checks, evidence, outages, performance, and notifications in one
               operations view.
             </p>
           </div>
           <div className="flex gap-2">
-            <button
+            <Button
+              variant="ghost"
+              type="button"
               className={button}
               onClick={() => {
                 setEditing(null);
@@ -414,14 +440,19 @@ export default function UptimePanel() {
             >
               <Plus size={15} />
               New monitor
-            </button>
-            <button className={button} onClick={() => void load()}>
+            </Button>
+            <Button
+              variant="ghost"
+              type="button"
+              className={button}
+              onClick={() => void load()}
+            >
               <RefreshCw size={15} />
               Refresh
-            </button>
+            </Button>
           </div>
         </div>
-        <div className="mt-5 grid grid-cols-2 gap-px border border-[#232936] bg-[#232936] md:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-px border border-border bg-muted md:grid-cols-4">
           <Metric label="MONITORS" value={String(monitors.length)} />
           <Metric
             label="ACTIVE"
@@ -442,26 +473,30 @@ export default function UptimePanel() {
         </div>
       </header>
       {error && (
-        <p className="m-5 border border-[#ff5757] bg-[#230d0d] p-3 text-sm text-[#FF6B79]">
+        <p className="m-5 border border-destructive bg-destructive/10 p-3 text-sm text-destructive">
           {error}
         </p>
       )}
-      <div className="grid border-b border-[#232936] xl:grid-cols-[240px_1fr]">
-        <aside className="border-b border-[#232936] bg-[#0D1017] p-4 xl:border-b-0 xl:border-r">
-          <p className="text-xs font-bold tracking-widest text-[#8B95A7]">
+      <div className="grid border-b border-border xl:grid-cols-[240px_1fr]">
+        <aside className="border-b border-border bg-muted p-4 xl:border-b-0 xl:border-r">
+          <p className="text-xs font-bold tracking-widest text-muted-foreground">
             PROJECTS
           </p>
-          <button
-            className={`mt-3 w-full border p-3 text-left text-sm ${project === 'all' ? 'border-[#7C6CFF] bg-[#171C26]' : 'border-[#232936]'}`}
+          <Button
+            variant="ghost"
+            type="button"
+            className={`mt-3 w-full border p-3 text-left text-sm ${project === 'all' ? 'border-foreground bg-muted' : 'border-border'}`}
             onClick={() => setProject('all')}
           >
             All projects{' '}
             <span className="float-right">{data.monitors.length}</span>
-          </button>
+          </Button>
           {data.projects.map((p) => (
-            <button
+            <Button
+              variant="ghost"
+              type="button"
               key={String(p.id)}
-              className={`mt-2 w-full border p-3 text-left text-sm ${project === p.id ? 'border-[#7C6CFF] bg-[#171C26]' : 'border-[#232936]'}`}
+              className={`mt-2 w-full border p-3 text-left text-sm ${project === p.id ? 'border-foreground bg-muted' : 'border-border'}`}
               onClick={() => setProject(String(p.id))}
             >
               <FolderKanban className="mr-2 inline" size={14} />
@@ -469,34 +504,37 @@ export default function UptimePanel() {
               <span className="float-right">
                 {data.monitors.filter((m) => m.project_id === p.id).length}
               </span>
-            </button>
+            </Button>
           ))}
           <form
             className="mt-4 flex"
             onSubmit={async (e) => {
               e.preventDefault();
-              const f = new FormData(e.currentTarget);
+              const formElement = e.currentTarget;
+              const f = new FormData(formElement);
               await act({ action: 'create_project', name: f.get('name') });
-              e.currentTarget.reset();
+              formElement.reset();
             }}
           >
-            <input
+            <Input
               name="name"
               className={field}
               placeholder="New project"
               required
             />
-            <button
-              className="border border-l-0 border-[#2D3442] px-3"
+            <Button
+              variant="ghost"
+              type="submit"
+              className="border border-l-0 border-border px-3"
               aria-label="Add project"
             >
               <Plus size={16} />
-            </button>
+            </Button>
           </form>
-          <div className="mt-6 border-t border-[#232936] pt-4 text-xs text-[#8B95A7]">
+          <div className="mt-6 border-t border-border pt-4 text-xs text-muted-foreground">
             <p
               className={
-                data.schedulerActive ? 'text-[#7C6CFF]' : 'text-[#FFB66D]'
+                data.schedulerActive ? 'text-foreground' : 'text-warning'
               }
             >
               {data.schedulerActive
@@ -512,21 +550,32 @@ export default function UptimePanel() {
           </div>
         </aside>
         <div>
-          {showForm && (
-            <Form
-              projects={data.projects}
-              monitor={editing ?? undefined}
-              onDone={() => {
-                setShowForm(false);
-                setEditing(null);
-                void load();
-              }}
-            />
-          )}
+          <Dialog open={showForm} onOpenChange={setShowForm}>
+            <DialogContent className="sm:max-w-4xl p-0">
+              <DialogHeader className="px-6 pt-6">
+                <DialogTitle>
+                  {editing ? 'Edit monitor' : 'Create monitor'}
+                </DialogTitle>
+                <DialogDescription>
+                  Configure an endpoint check and the conditions that trigger an
+                  incident.
+                </DialogDescription>
+              </DialogHeader>
+              <Form
+                projects={data.projects}
+                monitor={editing ?? undefined}
+                onDone={() => {
+                  setShowForm(false);
+                  setEditing(null);
+                  void load();
+                }}
+              />
+            </DialogContent>
+          </Dialog>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-left text-sm">
-              <thead className="border-b border-[#232936] bg-[#11151D] text-xs text-[#8B95A7]">
-                <tr>
+            <Table className="w-full min-w-[900px] text-left text-sm">
+              <TableHeader className="border-b border-border bg-background text-xs text-muted-foreground">
+                <TableRow>
                   {[
                     'MONITOR',
                     'METHOD',
@@ -536,18 +585,21 @@ export default function UptimePanel() {
                     'STATUS',
                     'ACTIONS',
                   ].map((h) => (
-                    <th key={h} className="p-3">
+                    <TableHead key={h} className="p-3">
                       {h}
-                    </th>
+                    </TableHead>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {monitors.map((m) => (
-                  <tr key={String(m.id)} className="border-b border-[#252525]">
-                    <td className="p-3">
+                  <TableRow
+                    key={String(m.id)}
+                    className="border-b border-border"
+                  >
+                    <TableCell className="p-3">
                       <strong>{m.name}</strong>
-                      <p className="max-w-[340px] truncate text-xs text-[#8B95A7]">
+                      <p className="max-w-[340px] truncate text-xs text-muted-foreground">
                         {m.url}
                       </p>
                       <div className="mt-1 flex gap-1">
@@ -555,35 +607,37 @@ export default function UptimePanel() {
                           (t: string) => (
                             <span
                               key={t}
-                              className="bg-[#222222] px-2 py-0.5 text-xs text-[#9D91FF]"
+                              className="bg-muted px-2 py-0.5 text-xs text-foreground"
                             >
                               {t}
                             </span>
                           ),
                         )}
                       </div>
-                    </td>
-                    <td className="p-3 font-mono">{m.method}</td>
-                    <td className="p-3">{m.interval_seconds}s</td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3 font-mono">{m.method}</TableCell>
+                    <TableCell className="p-3">{m.interval_seconds}s</TableCell>
+                    <TableCell className="p-3">
                       {m.expected_min}–{m.expected_max}
-                    </td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3">
                       {m.last_checked_at
                         ? ago(Number(m.last_checked_at), data.now)
                         : 'Never'}
-                      <p className="text-xs text-[#8B95A7]">
+                      <p className="text-xs text-muted-foreground">
                         {m.last_latency_ms ?? '—'} ms
                       </p>
-                    </td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3">
                       <Status
                         value={Number(m.enabled) ? String(m.status) : 'paused'}
                       />
-                    </td>
-                    <td className="p-3">
+                    </TableCell>
+                    <TableCell className="p-3">
                       <div className="flex gap-2">
-                        <button
+                        <Button
+                          variant="ghost"
+                          type="button"
                           title="Check now"
                           className={button}
                           disabled={!Number(m.enabled)}
@@ -592,8 +646,10 @@ export default function UptimePanel() {
                           }
                         >
                           <RefreshCw size={14} />
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          type="button"
                           title={Number(m.enabled) ? 'Pause' : 'Resume'}
                           className={button}
                           onClick={() =>
@@ -608,8 +664,10 @@ export default function UptimePanel() {
                           ) : (
                             <Play size={14} />
                           )}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          type="button"
                           title="Edit"
                           className={button}
                           onClick={() => {
@@ -618,57 +676,63 @@ export default function UptimePanel() {
                           }}
                         >
                           <Settings2 size={14} />
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          type="button"
                           title="Delete"
-                          className={`${button} text-[#FF6B79]`}
+                          className={`${button} text-destructive`}
                           onClick={() => setDeleteId(String(m.id))}
                         >
                           <Trash2 size={14} />
-                        </button>
+                        </Button>
                       </div>
                       {deleteId === m.id && (
-                        <div className="mt-2 border border-[#ff5757] p-2 text-xs">
+                        <div className="mt-2 border border-destructive p-2 text-xs">
                           Delete monitor and its checks?{' '}
-                          <button
+                          <Button
+                            variant="ghost"
+                            type="button"
                             className="ml-2 underline"
                             onClick={() =>
                               void act({ action: 'delete', id: m.id })
                             }
                           >
                             Confirm
-                          </button>
-                          <button
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            type="button"
                             className="ml-2 underline"
                             onClick={() => setDeleteId('')}
                           >
                             Cancel
-                          </button>
+                          </Button>
                         </div>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
             {!monitors.length && (
-              <p className="p-8 text-center text-[#8B95A7]">
+              <p className="p-8 text-center text-muted-foreground">
                 No monitors in this project.
               </p>
             )}
           </div>
         </div>
       </div>
-      <div className="grid gap-px border-b border-[#232936] bg-[#232936] lg:grid-cols-2">
-        <article className="bg-[#0D1017] p-5">
+      <div className="grid gap-px border-b border-border bg-muted lg:grid-cols-2">
+        <article className="bg-background p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs tracking-widest text-[#7C6CFF]">
+              <p className="text-xs tracking-widest text-foreground">
                 30-DAY AVAILABILITY
               </p>
               <h3 className="mt-2 text-xl font-bold">Service status</h3>
             </div>
-            <span className="text-sm text-[#8B95A7]">
+            <span className="text-sm text-muted-foreground">
               {checks.length} checks
             </span>
           </div>
@@ -677,66 +741,67 @@ export default function UptimePanel() {
               <div
                 key={d.date}
                 title={`${d.date}: ${d.state}`}
-                className={`min-w-1 flex-1 ${d.state === 'up' ? 'bg-[#7C6CFF]' : d.state === 'down' ? 'bg-[#ff5757]' : 'bg-[#202633]'}`}
+                className={`min-w-1 flex-1 ${d.state === 'up' ? 'bg-primary' : d.state === 'down' ? 'bg-destructive/10' : 'bg-muted'}`}
                 style={{ height: d.state === 'none' ? '25%' : '100%' }}
               />
             ))}
           </div>
-          <div className="mt-3 flex gap-4 text-xs text-[#8B95A7]">
+          <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
             <span>■ Operational</span>
-            <span className="text-[#FF6B79]">■ Disrupted</span>
+            <span className="text-destructive">■ Disrupted</span>
             <span>■ No data</span>
           </div>
         </article>
-        <article className="bg-[#0D1017] p-5">
+        <article className="bg-background p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs tracking-widest text-[#7C6CFF]">
+              <p className="text-xs tracking-widest text-foreground">
                 PERFORMANCE
               </p>
               <h3 className="mt-2 text-xl font-bold">Response time</h3>
             </div>
             <div className="flex">
               {[1, 7, 30, 90].map((v) => (
-                <button
+                <Button
+                  variant="ghost"
+                  type="button"
                   key={v}
-                  className={`border px-3 py-1 text-xs ${range === v ? 'border-[#7C6CFF] text-[#7C6CFF]' : 'border-[#2D3442]'}`}
+                  className={`border px-3 py-1 text-xs ${range === v ? 'border-foreground text-foreground' : 'border-border'}`}
                   onClick={() => setRange(v)}
                 >
                   {v === 1 ? '24H' : `${v}D`}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
           <div className="mt-4 h-52">
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartContainer
+              className="h-full w-full aspect-auto"
+              config={{
+                latency: { label: 'Response time (ms)', color: '#262626' },
+              }}
+            >
               <LineChart data={chart}>
-                <CartesianGrid stroke="#252525" />
-                <XAxis dataKey="time" stroke="#8B95A7" fontSize={11} />
-                <YAxis stroke="#8B95A7" fontSize={11} />
-                <Tooltip
-                  contentStyle={{
-                    background: '#0D1017',
-                    border: '1px solid #2D3442',
-                    borderRadius: 0,
-                  }}
-                />
+                <CartesianGrid stroke="#e5e5e5" vertical={false} />
+                <XAxis dataKey="time" stroke="#737373" fontSize={11} />
+                <YAxis stroke="#737373" fontSize={11} />
+                <ChartTooltip content={<ChartTooltipContent />} />
                 <Line
                   type="monotone"
                   dataKey="latency"
-                  stroke="#7C6CFF"
+                  stroke="#262626"
                   dot={false}
                 />
               </LineChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </div>
         </article>
       </div>
-      <div className="grid gap-px bg-[#232936] lg:grid-cols-[1.4fr_1fr]">
-        <article className="bg-[#0D1017] p-5">
+      <div className="grid gap-px bg-muted lg:grid-cols-[1.4fr_1fr]">
+        <article className="bg-background p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs tracking-widest text-[#7C6CFF]">
+              <p className="text-xs tracking-widest text-foreground">
                 INCIDENT HISTORY
               </p>
               <h3 className="mt-2 text-xl font-bold">Outage timeline</h3>
@@ -748,28 +813,30 @@ export default function UptimePanel() {
                 ['ack', 'ACKNOWLEDGED'],
                 ['resolved', 'RESOLVED'],
               ].map(([v, l]) => (
-                <button
+                <Button
+                  variant="ghost"
+                  type="button"
                   key={v}
-                  className={`border px-3 py-1 text-xs ${filter === v ? 'border-[#7C6CFF]' : 'border-[#2D3442]'}`}
+                  className={`border px-3 py-1 text-xs ${filter === v ? 'border-foreground' : 'border-border'}`}
                   onClick={() => setFilter(v)}
                 >
                   {l}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
           <div className="mt-4 space-y-2">
             {incidents.map((i) => (
-              <div key={String(i.id)} className="border border-[#232936] p-4">
+              <div key={String(i.id)} className="border border-border p-4">
                 <div className="flex flex-wrap justify-between gap-2">
                   <div>
                     <Status value={String(i.status)} />
                     <h4 className="mt-2 font-bold">{i.title}</h4>
-                    <p className="mt-1 text-sm text-[#8B95A7]">
+                    <p className="mt-1 text-sm text-muted-foreground">
                       {i.trigger_text}
                     </p>
                   </div>
-                  <div className="text-right text-xs text-[#8B95A7]">
+                  <div className="text-right text-xs text-muted-foreground">
                     <p>{new Date(String(i.started_at)).toLocaleString()}</p>
                     <p>
                       {duration(
@@ -782,7 +849,9 @@ export default function UptimePanel() {
                 </div>
                 <div className="mt-3 flex gap-2">
                   {i.status === 'investigating' && (
-                    <button
+                    <Button
+                      variant="ghost"
+                      type="button"
                       className={button}
                       onClick={() =>
                         void act({
@@ -793,10 +862,12 @@ export default function UptimePanel() {
                       }
                     >
                       Acknowledge
-                    </button>
+                    </Button>
                   )}
                   {i.status !== 'resolved' && (
-                    <button
+                    <Button
+                      variant="ghost"
+                      type="button"
                       className={button}
                       onClick={() =>
                         void act({
@@ -807,24 +878,24 @@ export default function UptimePanel() {
                       }
                     >
                       Resolve
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
             ))}
             {!incidents.length && (
-              <p className="py-8 text-center text-[#8B95A7]">
+              <p className="py-8 text-center text-muted-foreground">
                 No incidents in this view.
               </p>
             )}
           </div>
         </article>
-        <article className="bg-[#0D1017] p-5">
-          <p className="text-xs tracking-widest text-[#7C6CFF]">
+        <article className="bg-background p-6">
+          <p className="text-xs tracking-widest text-foreground">
             NOTIFICATIONS
           </p>
           <h3 className="mt-2 text-xl font-bold">Destinations</h3>
-          <p className="mt-2 text-sm text-[#8B95A7]">
+          <p className="mt-2 text-sm text-muted-foreground">
             Opened, acknowledged, and resolved lifecycle events.
           </p>
           <div className="mt-4 space-y-2">
@@ -836,30 +907,30 @@ export default function UptimePanel() {
             ].map(([key, label]) => (
               <div
                 key={key}
-                className="flex items-center border border-[#232936] p-3"
+                className="flex items-center border border-border p-3"
               >
                 <Bell size={15} />
                 <span className="ml-3">{label}</span>
                 <span
-                  className={`ml-auto text-xs ${data.channels[key] ? 'text-[#7C6CFF]' : 'text-[#FFB66D]'}`}
+                  className={`ml-auto text-xs ${data.channels[key] ? 'text-foreground' : 'text-warning'}`}
                 >
                   {data.channels[key] ? 'ACTIVE' : 'NEEDS SECRET'}
                 </span>
               </div>
             ))}
           </div>
-          <p className="mt-4 text-xs text-[#8B95A7]">
+          <p className="mt-4 text-xs text-muted-foreground">
             Channel credentials stay in server environment variables. Webhooks
             are signed with HMAC-SHA256.
           </p>
-          <div className="mt-6 border-t border-[#232936] pt-4">
-            <p className="text-xs tracking-widest text-[#7C6CFF]">
+          <div className="mt-6 border-t border-border pt-4">
+            <p className="text-xs tracking-widest text-foreground">
               CAPTURED EVIDENCE
             </p>
             {checks.slice(0, 5).map((c) => (
               <div
                 key={String(c.id)}
-                className="mt-3 border-l-2 border-[#2D3442] pl-3 text-xs"
+                className="mt-3 border-l-2 border-border pl-3 text-xs"
               >
                 <p>
                   {new Date(Number(c.checked_at)).toLocaleString()} ·{' '}
@@ -867,7 +938,9 @@ export default function UptimePanel() {
                   {c.latency_ms}ms
                 </p>
                 <p
-                  className={Number(c.ok) ? 'text-[#7C6CFF]' : 'text-[#FF6B79]'}
+                  className={
+                    Number(c.ok) ? 'text-foreground' : 'text-destructive'
+                  }
                 >
                   {Number(c.ok) ? 'Healthy' : c.error}
                 </p>
@@ -889,10 +962,10 @@ function Metric({
   danger?: boolean;
 }) {
   return (
-    <div className="bg-[#0D1017] p-4">
-      <p className="text-xs text-[#8B95A7]">{label}</p>
+    <div className="bg-muted p-4">
+      <p className="text-xs text-muted-foreground">{label}</p>
       <p
-        className={`mt-1 text-2xl font-bold ${danger ? 'text-[#FF6B79]' : 'text-[#F4F7FB]'}`}
+        className={`mt-1 text-2xl font-bold ${danger ? 'text-destructive' : 'text-foreground'}`}
       >
         {value}
       </p>
@@ -904,7 +977,7 @@ function Status({ value }: { value: string }) {
     bad = ['down', 'investigating'].includes(value);
   return (
     <span
-      className={`inline-flex items-center gap-1 border px-2 py-1 text-xs font-bold uppercase ${good ? 'border-[#626C7D] text-[#7C6CFF]' : bad ? 'border-[#943c3c] text-[#FF6B79]' : 'border-[#735d2c] text-[#FFB66D]'}`}
+      className={`inline-flex items-center gap-1 border px-2 py-1 text-xs font-bold uppercase ${good ? 'border-border text-foreground' : bad ? 'border-destructive text-destructive' : 'border-warning text-warning'}`}
     >
       {good ? (
         <CheckCircle2 size={12} />

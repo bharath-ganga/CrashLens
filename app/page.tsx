@@ -1,4 +1,18 @@
 'use client';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 
 import {
   ChangeEvent,
@@ -13,21 +27,14 @@ import {
   Activity,
   AlertTriangle,
   ArrowDownToLine,
-  Bell,
-  Boxes,
   CheckCircle2,
   ChevronRight,
   CircleCheck,
   Clipboard,
-  Database,
   FileCode2,
   Filter,
-  GitCommitHorizontal,
-  LayoutDashboard,
-  HeartPulse,
   History,
   LoaderCircle,
-  Menu,
   MoreHorizontal,
   Plug,
   Radio,
@@ -35,27 +42,43 @@ import {
   Search,
   Send,
   Server,
-  Settings,
-  ShieldCheck,
   Sparkles,
   Upload,
-  Users,
   X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import UptimePanel from './uptime-panel';
 import AdminClientsPanel from './admin-clients-panel';
 import ProductionIntelligencePanel from './production-intelligence-panel';
 import Link from 'next/link';
+import { WorkspaceShell } from '@/components/workspace-shell';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from '@/components/ui/empty';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import {
   analyzeLogs,
   buildReport,
@@ -148,7 +171,6 @@ export default function Home() {
   const [incidents, setIncidents] = useState<Incident[]>(initialIncidents);
   const [selectedId, setSelectedId] = useState(initialIncidents[0]?.id ?? '');
   const [filename, setFilename] = useState('');
-  const [fileSize, setFileSize] = useState('0 KB');
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState<'analysis' | 'timeline' | 'logs'>('analysis');
   const [processing, setProcessing] = useState(false);
@@ -168,13 +190,9 @@ export default function Home() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [comment, setComment] = useState('');
   const [historyIncidentId, setHistoryIncidentId] = useState('');
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [incidentFilter, setIncidentFilter] = useState<IncidentFilter>('all');
   const [environment, setEnvironment] = useState('Production');
   const [dateRange, setDateRange] = useState('Last 24h');
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
 
   const selected =
     incidents.find((incident) => incident.id === selectedId) ?? incidents[0];
@@ -335,7 +353,6 @@ export default function Home() {
       setIncidents(grouped);
       setSelectedId(grouped[0].id);
       setFilename(file.name);
-      setFileSize(`${Math.max(0.1, file.size / 1024).toFixed(1)} KB`);
       setResolved([]);
       setUploadOpen(false);
       setTab('analysis');
@@ -382,933 +399,716 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#090B0F] text-[#F4F7FB]">
-      <header className="sticky top-0 z-50 flex h-16 items-center border-b border-[#232936] bg-[#0D1017] px-4 lg:px-5">
-        <button
-          aria-label={mobileNavOpen ? 'Close navigation' : 'Open navigation'}
-          onClick={() => setMobileNavOpen((open) => !open)}
-          className="mr-3 grid size-9 place-items-center rounded-lg border border-[#232936] bg-[#11151D] text-[#F4F7FB] lg:hidden"
+    <WorkspaceShell
+      view={view}
+      onNavigate={(value) => setView(value as WorkspaceView)}
+      query={query}
+      onSearch={setQuery}
+      environment={environment}
+      onEnvironment={setEnvironment}
+      dateRange={dateRange}
+      onDateRange={setDateRange}
+      onUpload={() => setUploadOpen(true)}
+      onCritical={() => {
+        setView('incidents');
+        setIncidentFilter('critical');
+      }}
+      criticalCount={
+        incidents.filter((item) => item.severity === 'critical').length
+      }
+      user={workspace?.user}
+      admin={workspace?.capabilities.platformAdmin}
+      filename={filename}
+      logCount={logs.length}
+    >
+      {error && (
+        <div
+          role="alert"
+          className="mb-4 flex items-start gap-3 border border-destructive bg-destructive/10 p-3 text-xs text-destructive"
         >
-          {mobileNavOpen ? <X size={19} /> : <Menu size={19} />}
-        </button>
-        <div className="flex items-center gap-2.5">
-          <span className="grid size-9 place-items-center rounded-xl bg-[#7C6CFF] text-white shadow-[0_8px_24px_rgba(124,108,255,.24)]">
-            <Activity size={18} strokeWidth={2.5} />
-          </span>
-          <span className="text-sm font-semibold tracking-[-0.02em] text-white">
-            CrashLens
-          </span>
+          <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+          <span>{error}</span>
+          <Button
+            variant="ghost"
+            type="button"
+            onClick={() => setError('')}
+            className="ml-auto"
+          >
+            <X size={14} />
+          </Button>
         </div>
-        <label className="ml-8 hidden h-9 max-w-lg flex-1 items-center gap-2 rounded-lg border border-[#232936] bg-[#090B0F] px-3 text-[#8B95A7] lg:flex">
-          <Search size={15} />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search incidents, logs, services…"
-            className="w-full bg-transparent text-sm text-[#F4F7FB] outline-none placeholder:text-[#626C7D]"
-          />
-          <span className="rounded border border-[#2D3442] px-1.5 py-0.5 text-[10px]">
-            ⌘K
-          </span>
-        </label>
-        <div className="ml-auto flex items-center gap-2 text-xs text-[#8B95A7] lg:ml-3">
-          <select
-            value={environment}
-            onChange={(event) => setEnvironment(event.target.value)}
-            aria-label="Environment"
-            className="hidden h-9 rounded-lg border border-[#232936] bg-[#11151D] px-2 text-xs text-[#D9DEEA] outline-none sm:block"
-          >
-            <option>Production</option>
-            <option>Staging</option>
-            <option>Development</option>
-          </select>
-          <select
-            value={dateRange}
-            onChange={(event) => setDateRange(event.target.value)}
-            aria-label="Time range"
-            className="hidden h-9 rounded-lg border border-[#232936] bg-[#11151D] px-2 text-xs text-[#D9DEEA] outline-none md:block"
-          >
-            <option>Last 24h</option>
-            <option>Last 7 days</option>
-            <option>Last 30 days</option>
-          </select>
-          <div className="relative">
-            <button
-              aria-label="Notifications"
-              onClick={() => setNotificationsOpen((open) => !open)}
-              className="relative grid size-9 place-items-center rounded-lg border border-[#232936] bg-[#11151D] hover:bg-[#171C26]"
-            >
-              <Bell size={16} />
-              <span className="absolute right-2 top-2 size-1.5 rounded-full bg-[#FF4D5E]" />
-            </button>
-            {notificationsOpen && (
-              <div className="absolute right-0 top-11 w-72 rounded-xl border border-[#232936] bg-[#11151D] p-3 shadow-2xl">
-                <p className="font-semibold text-[#F4F7FB]">Notifications</p>
-                <p className="mt-2 text-xs leading-5">
-                  {
-                    incidents.filter((item) => item.severity === 'critical')
-                      .length
-                  }{' '}
-                  critical incidents need review.
-                </p>
-                <button
-                  onClick={() => {
-                    setView('incidents');
-                    setIncidentFilter('critical');
-                    setNotificationsOpen(false);
-                  }}
-                  className="mt-3 text-xs font-semibold text-[#9D91FF]"
-                >
-                  View critical incidents →
-                </button>
-              </div>
-            )}
-          </div>
-          <Link
-            href="/account"
-            aria-label="Open account"
-            className="grid size-9 place-items-center rounded-full bg-[#7C6CFF] text-xs font-semibold text-white"
-          >
-            {(workspace?.user.name || workspace?.user.email || 'CL')
-              .slice(0, 2)
-              .toUpperCase()}
-          </Link>
-        </div>
-      </header>
-
-      {mobileNavOpen && (
-        <button
-          aria-label="Close navigation overlay"
-          onClick={() => setMobileNavOpen(false)}
-          className="fixed inset-0 top-16 z-30 bg-black/70 lg:hidden"
-        />
       )}
-      <div className="flex min-h-[calc(100vh-64px)]">
-        <aside
-          className={`${mobileNavOpen ? 'fixed inset-y-16 left-0 z-40 flex' : 'hidden'} ${sidebarCollapsed ? 'w-[76px]' : 'w-60'} shrink-0 flex-col border-r border-[#232936] bg-[#0D1017] p-3 transition-[width] lg:static lg:flex`}
-        >
-          <nav className="space-y-1">
-            {(
-              [
-                ['overview', LayoutDashboard, 'Overview'],
-                ['incidents', AlertTriangle, 'Incidents'],
-                ['logs', FileCode2, 'Logs'],
-                ['services', Boxes, 'Services'],
-                ['deployments', GitCommitHorizontal, 'Deployments'],
-                ['intelligence', ScanSearch, 'Intelligence'],
-                ['monitoring', HeartPulse, 'Monitoring'],
-                ['integrations', Plug, 'Integrations'],
-                ['settings', Settings, 'Settings'],
-                ['history', History, 'History'],
-                ['team', Users, 'Team'],
-                ...(workspace?.capabilities.platformAdmin
-                  ? ([['clients', Users, 'Clients']] as const)
-                  : []),
-              ] as Array<[WorkspaceView, LucideIcon, string]>
-            ).map(([key, Icon, label]) => (
-              <button
-                key={key}
-                onClick={() => {
-                  setView(key);
-                  setMobileNavOpen(false);
-                }}
-                title={sidebarCollapsed ? label : undefined}
-                className={`flex h-10 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors ${view === key ? 'bg-[#23283B] text-white' : 'text-[#8B95A7] hover:bg-[#171C26] hover:text-white'}`}
-              >
-                <Icon
-                  size={17}
-                  className={view === key ? 'text-[#9D91FF]' : ''}
-                />
-                {!sidebarCollapsed && label}
-                {key === 'incidents' && (
-                  <span className="ml-auto rounded-full bg-[#FF4D5E]/15 px-2 py-0.5 text-[11px] font-semibold text-[#FF6B79]">
-                    {incidents.length}
-                  </span>
-                )}
-              </button>
-            ))}
-            {!sidebarCollapsed && (
-              <button
-                onClick={() => {
-                  setUploadOpen(true);
-                  setMobileNavOpen(false);
-                }}
-                className="mt-3 flex h-10 w-full items-center gap-3 rounded-lg border border-[#2D3442] bg-transparent px-3 text-sm font-medium text-[#B5BECD] hover:bg-[#171C26] hover:text-white"
-              >
-                <Database size={15} />
-                Upload source
-              </button>
-            )}
-          </nav>
-          {!sidebarCollapsed && (
-            <>
-              <p className="px-3 pb-2 pt-8 text-[11px] font-medium uppercase tracking-[0.12em] text-[#626C7D]">
-                CURRENT SOURCE
-              </p>
-              <div className="rounded-xl border border-[#232936] bg-[#11151D] p-4">
-                <div
-                  className={`mb-2 flex items-center gap-2 text-xs font-medium ${filename ? 'text-[#35D07F]' : 'text-[#8B95A7]'}`}
-                >
-                  {filename ? <CheckCircle2 size={14} /> : <Radio size={14} />}
-                  {filename ? 'Parsed' : 'Waiting for data'}
-                </div>
-                <p className="truncate text-sm text-[#F4F7FB]" title={filename}>
-                  {filename || 'No source connected'}
-                </p>
-                <p className="mt-2 text-xs text-[#8B95A7]">
-                  {logs.length} rows · {fileSize}
-                </p>
-              </div>
-              <div className="mt-auto border-t border-[#232936] pt-3">
-                <div className="flex items-center gap-2 px-2 text-xs text-[#8B95A7]">
-                  <ShieldCheck size={14} className="text-[#35D07F]" /> PII
-                  redaction active
-                </div>
-              </div>
-            </>
-          )}
-          <button
-            onClick={() => setSidebarCollapsed((value) => !value)}
-            className="mt-3 flex h-9 items-center justify-center rounded-lg border border-[#232936] text-[#8B95A7] hover:bg-[#171C26] hover:text-white"
-            aria-label="Collapse sidebar"
-          >
-            {sidebarCollapsed ? '→' : '←  Collapse'}
-          </button>
-        </aside>
 
-        <div className="min-w-0 flex-1">
-          <section className="border-b border-[#232936] bg-[#090B0F] px-4 py-7 lg:px-8">
-            <div className="mx-auto flex max-w-[1500px] flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-              <div>
-                <h1 className="text-2xl font-semibold tracking-[-0.035em] text-[#F4F7FB] lg:text-[30px]">
-                  {view[0].toUpperCase()}
-                  {view.slice(1)}
-                </h1>
-                <p className="mt-1.5 text-sm text-[#8B95A7]">
-                  {view === 'incidents'
-                    ? 'Monitor, investigate and resolve production issues.'
-                    : view === 'overview'
-                      ? 'A live view of production health and operational risk.'
-                      : `Explore ${view} across ${environment.toLowerCase()}.`}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => setUploadOpen(true)}
-                  className="flex h-10 items-center gap-2 rounded-lg bg-[#7C6CFF] px-5 text-xs font-semibold text-white shadow-[0_8px_24px_rgba(124,108,255,.2)] hover:bg-[#8A7BFF]"
-                >
-                  <Upload size={15} />
-                  Upload logs
-                </button>
-              </div>
-            </div>
+      {view === 'incidents' ? (
+        <>
+          <Tabs
+            value={incidentFilter}
+            onValueChange={(value) =>
+              setIncidentFilter(value as IncidentFilter)
+            }
+            className="mb-6"
+          >
+            <TabsList variant="line">
+              {(['all', 'open', 'critical', 'resolved'] as const).map(
+                (filter) => (
+                  <TabsTrigger
+                    key={filter}
+                    value={filter}
+                    className="px-4 capitalize"
+                  >
+                    {filter === 'all' ? 'All incidents' : filter}
+                  </TabsTrigger>
+                ),
+              )}
+            </TabsList>
+          </Tabs>
+          <section className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
+            {metrics.map(({ label, value, note, icon: Icon }) => (
+              <Card
+                key={label}
+                className="block py-0 rounded-none border border-border bg-background p-4 shadow-none"
+              >
+                <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+                  <span>{label}</span>
+                  <Icon size={15} />
+                </div>
+                <div className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-foreground">
+                  {value}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">{note}</p>
+              </Card>
+            ))}
           </section>
 
-          <div className="mx-auto max-w-[1500px] p-4 lg:p-6">
-            {error && (
-              <div
-                role="alert"
-                className="mb-4 flex items-start gap-3 border border-[#a53d3d] bg-[#200d0f] p-3 text-xs text-[#FF6B79]"
-              >
-                <AlertTriangle size={15} className="mt-0.5 shrink-0" />
-                <span>{error}</span>
-                <button onClick={() => setError('')} className="ml-auto">
-                  <X size={14} />
-                </button>
+          <Card className="block py-0 mb-5 overflow-hidden rounded-none border border-border bg-background p-4 shadow-none">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Radio size={13} className="text-foreground" /> Incident
+                activity
               </div>
-            )}
-
-            {view === 'incidents' ? (
-              <>
-                <div className="mb-5 flex flex-wrap items-center gap-2">
-                  {(
-                    ['all', 'open', 'critical', 'resolved'] as IncidentFilter[]
-                  ).map((filter) => (
-                    <button
-                      key={filter}
-                      onClick={() => setIncidentFilter(filter)}
-                      className={`rounded-lg px-3 py-2 text-xs font-medium capitalize ${incidentFilter === filter ? 'bg-[#242A3B] text-white' : 'border border-[#232936] bg-[#11151D] text-[#8B95A7] hover:bg-[#171C26]'}`}
-                    >
-                      {filter}
-                    </button>
-                  ))}
-                </div>
-                <section className="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
-                  {metrics.map(({ label, value, note, icon: Icon }) => (
-                    <article
-                      key={label}
-                      className="rounded-xl border border-[#232936] bg-[#11151D] p-4 shadow-[0_10px_30px_rgba(0,0,0,.12)]"
-                    >
-                      <div className="flex items-center justify-between text-xs font-medium text-[#8B95A7]">
-                        <span>{label}</span>
-                        <Icon size={15} />
-                      </div>
-                      <div className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-white">
-                        {value}
-                      </div>
-                      <p className="mt-1 text-xs text-[#626C7D]">{note}</p>
-                    </article>
-                  ))}
-                </section>
-
-                <section className="mb-5 overflow-hidden rounded-xl border border-[#232936] bg-[#11151D] p-4 shadow-[0_10px_30px_rgba(0,0,0,.12)]">
-                  <div className="mb-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm font-medium text-[#D9DEEA]">
-                      <Radio size={13} className="text-[#9D91FF]" /> Incident
-                      activity
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-[#626C7D]">
-                      <span className="flex items-center gap-1.5">
-                        <span className="size-2 rounded-full bg-[#7C6CFF]" />
-                        All events
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="size-2 rounded-full bg-[#FF4D5E]" />
-                        Critical
-                      </span>
-                    </div>
-                  </div>
-                  <div className="h-[190px] w-full">
-                    <ResponsiveContainer
-                      width="100%"
-                      height="100%"
-                      minWidth={0}
-                      minHeight={190}
-                    >
-                      <AreaChart
-                        data={signalBars}
-                        margin={{ top: 8, right: 8, left: -28, bottom: 0 }}
-                      >
-                        <defs>
-                          <linearGradient
-                            id="activityFill"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop
-                              offset="0%"
-                              stopColor="#7C6CFF"
-                              stopOpacity={0.34}
-                            />
-                            <stop
-                              offset="100%"
-                              stopColor="#7C6CFF"
-                              stopOpacity={0.02}
-                            />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid
-                          vertical={false}
-                          stroke="#232936"
-                          strokeDasharray="3 5"
-                        />
-                        <XAxis
-                          dataKey="label"
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fill: '#626C7D', fontSize: 11 }}
-                          interval="preserveStartEnd"
-                        />
-                        <YAxis
-                          allowDecimals={false}
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fill: '#626C7D', fontSize: 11 }}
-                        />
-                        <Tooltip
-                          contentStyle={{
-                            background: '#0D1017',
-                            border: '1px solid #2D3442',
-                            borderRadius: 8,
-                            color: '#F4F7FB',
-                            fontSize: 12,
-                          }}
-                          labelFormatter={(label) => `${label} UTC`}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="count"
-                          name="All events"
-                          stroke="#7C6CFF"
-                          strokeWidth={2.5}
-                          fill="url(#activityFill)"
-                          activeDot={{
-                            r: 5,
-                            fill: '#9D91FF',
-                            stroke: '#0D1017',
-                            strokeWidth: 2,
-                          }}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="critical"
-                          name="Critical"
-                          stroke="#FF4D5E"
-                          strokeWidth={2}
-                          fill="transparent"
-                          dot={{ r: 3, fill: '#FF4D5E', strokeWidth: 0 }}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </section>
-
-                <section
-                  id="incidents"
-                  className="grid min-h-[610px] overflow-hidden rounded-xl border border-[#232936] bg-[#11151D] shadow-[0_12px_34px_rgba(0,0,0,.16)] xl:grid-cols-[minmax(520px,.95fr)_minmax(0,1.05fr)]"
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-primary" />
+                  All events
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-2 rounded-full bg-destructive/10" />
+                  Critical
+                </span>
+              </div>
+            </div>
+            <div className="h-[190px] w-full">
+              {logs.length === 0 ? (
+                <Empty className="h-full">
+                  <EmptyHeader>
+                    <EmptyTitle>No activity yet</EmptyTitle>
+                    <EmptyDescription>
+                      Event volume will appear here when you upload logs.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <ChartContainer
+                  className="h-full w-full aspect-auto"
+                  config={{
+                    count: { label: 'All events', color: '#262626' },
+                    critical: { label: 'Critical', color: '#b42318' },
+                  }}
                 >
-                  <div className="border-b border-[#232936] xl:border-b-0 xl:border-r">
-                    <div className="flex items-center justify-between border-b border-[#232936] p-4">
-                      <div>
-                        <h2 className="text-sm font-semibold text-white">
-                          Active incidents
-                        </h2>
-                        <p className="mt-1 text-xs text-[#626C7D]">
-                          Grouped by fingerprint and service
-                        </p>
-                      </div>
-                      <label className="flex h-9 w-52 items-center gap-2 rounded-lg border border-[#232936] bg-[#090B0F] px-3 text-[#8B95A7] focus-within:border-[#7C6CFF]">
-                        <Search size={15} />
-                        <input
-                          value={query}
-                          onChange={(event) => setQuery(event.target.value)}
-                          placeholder="Filter incidents or services"
-                          className="w-full bg-transparent text-xs text-white outline-none placeholder:text-[#626C7D]"
+                  <AreaChart
+                    data={signalBars}
+                    margin={{ top: 8, right: 8, left: -28, bottom: 0 }}
+                  >
+                    <CartesianGrid
+                      vertical={false}
+                      stroke="#e5e5e5"
+                      strokeDasharray="3 5"
+                    />
+                    <XAxis
+                      dataKey="label"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#737373', fontSize: 11 }}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fill: '#737373', fontSize: 11 }}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Area
+                      type="monotone"
+                      dataKey="count"
+                      name="All events"
+                      stroke="#262626"
+                      strokeWidth={2.5}
+                      fill="#f5f5f5"
+                      activeDot={{
+                        r: 5,
+                        fill: '#525252',
+                        stroke: '#ffffff',
+                        strokeWidth: 2,
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="critical"
+                      name="Critical"
+                      stroke="#b42318"
+                      strokeWidth={2}
+                      fill="transparent"
+                      dot={{ r: 3, fill: '#b42318', strokeWidth: 0 }}
+                    />
+                  </AreaChart>
+                </ChartContainer>
+              )}
+            </div>
+          </Card>
+
+          <Card
+            id="incidents"
+            className="block py-0 grid min-h-[610px] overflow-hidden rounded-none border border-border bg-background shadow-none xl:grid-cols-[minmax(520px,.95fr)_minmax(0,1.05fr)]"
+          >
+            <div className="border-b border-border xl:border-b-0 xl:border-r">
+              <div className="flex items-center justify-between border-b border-border p-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-foreground">
+                    Active incidents
+                  </h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Grouped by fingerprint and service
+                  </p>
+                </div>
+                <Label className="flex h-9 w-52 items-center gap-2 rounded-none border border-border bg-background px-3 text-muted-foreground focus-within:border-foreground">
+                  <Search size={15} />
+                  <Input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Filter incidents or services"
+                    className="w-full bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
+                  />
+                  <Filter size={14} />
+                </Label>
+              </div>
+              <div className="grid grid-cols-[1fr_92px_82px_72px] gap-3 border-b border-border px-4 py-2.5 text-[10px] font-medium uppercase tracking-[.08em] text-muted-foreground">
+                <span>Incident</span>
+                <span>Service</span>
+                <span>Status</span>
+                <span className="text-right">Events</span>
+              </div>
+              <div className="max-h-[535px] overflow-y-auto">
+                {filteredIncidents.length ? (
+                  filteredIncidents.map((incident) => (
+                    <Button
+                      variant="ghost"
+                      type="button"
+                      aria-label={`Open incident ${incident.id}: ${incident.title}`}
+                      key={incident.id}
+                      onClick={() => {
+                        setSelectedId(incident.id);
+                        setTab('analysis');
+                      }}
+                      className={`grid h-auto w-full grid-cols-[1fr_92px_82px_72px] items-center gap-3 border-b border-border px-4 py-3 text-left transition-colors ${selected?.id === incident.id ? 'bg-muted' : 'bg-background hover:bg-muted'}`}
+                    >
+                      <span className="min-w-0">
+                        <span className="flex items-center gap-2">
+                          <span
+                            className={`size-2 shrink-0 rounded-full ${incident.severity === 'critical' ? 'bg-destructive/10' : incident.severity === 'warning' ? 'bg-warning/10' : 'bg-warning/10'}`}
+                          />
+                          <span className="truncate text-[13px] font-medium text-foreground">
+                            {incident.title}
+                          </span>
+                        </span>
+                        <span className="mt-1.5 flex gap-2 text-[11px] text-muted-foreground">
+                          <span>#{incident.id}</span>
+                          <span>{time(incident.started)} UTC</span>
+                        </span>
+                      </span>
+                      <span className="truncate text-xs text-foreground">
+                        {incident.service}
+                      </span>
+                      <Badge
+                        className={`w-fit rounded-full px-2 py-1 text-[10px] font-semibold ${resolved.includes(incident.id) ? 'bg-success/10 text-success' : incident.severity === 'critical' ? 'bg-destructive/10 text-destructive' : 'bg-warning/10 text-warning'}`}
+                      >
+                        {resolved.includes(incident.id)
+                          ? 'Resolved'
+                          : incident.severity === 'critical'
+                            ? 'Critical'
+                            : 'Open'}
+                      </Badge>
+                      <span className="text-right">
+                        <span className="block text-xs text-foreground">
+                          {incident.logs.length}
+                        </span>
+                        <span className="mt-1 block text-[10px] text-destructive">
+                          {incident.change}
+                        </span>
+                      </span>
+                    </Button>
+                  ))
+                ) : (
+                  <div className="p-8 text-center text-xs text-muted-foreground">
+                    No incidents match this filter.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {selected ? (
+              <div className="min-w-0">
+                <div className="border-b border-border p-4 lg:p-5">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+                        <span
+                          className={`size-1.5 ${selected.severity === 'critical' ? 'bg-destructive/10' : 'bg-warning/10'}`}
                         />
-                        <Filter size={14} />
-                      </label>
+                        INCIDENT #{selected.id} /{' '}
+                        {resolved.includes(selected.id)
+                          ? 'RESOLVED'
+                          : selected.status.toUpperCase()}
+                      </div>
+                      <h2 className="text-xl font-semibold tracking-[-0.03em] text-foreground">
+                        {selected.title}
+                      </h2>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {selected.service} · {selected.logs.length} correlated
+                        events · {dateTime(selected.started)} UTC
+                      </p>
                     </div>
-                    <div className="grid grid-cols-[1fr_92px_82px_72px] gap-3 border-b border-[#232936] px-4 py-2.5 text-[10px] font-medium uppercase tracking-[.08em] text-[#626C7D]">
-                      <span>Incident</span>
-                      <span>Service</span>
-                      <span>Status</span>
-                      <span className="text-right">Events</span>
-                    </div>
-                    <div className="max-h-[535px] overflow-y-auto">
-                      {filteredIncidents.length ? (
-                        filteredIncidents.map((incident) => (
-                          <button
-                            aria-label={`Open incident ${incident.id}: ${incident.title}`}
-                            key={incident.id}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        type="button"
+                        onClick={() => setTab('logs')}
+                        className="h-9 rounded-none border border-border bg-muted px-3 text-xs font-medium text-foreground hover:bg-muted"
+                      >
+                        View logs
+                      </Button>
+                      <Button
+                        variant="default"
+                        type="button"
+                        onClick={() =>
+                          setResolved((items) =>
+                            items.includes(selected.id)
+                              ? items.filter((id) => id !== selected.id)
+                              : [...items, selected.id],
+                          )
+                        }
+                        className="h-9 rounded-none bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary"
+                      >
+                        {resolved.includes(selected.id) ? 'Reopen' : 'Resolve'}
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              aria-label="More incident actions"
+                            />
+                          }
+                        >
+                          <MoreHorizontal />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
                             onClick={() => {
-                              setSelectedId(incident.id);
-                              setTab('analysis');
+                              void navigator.clipboard.writeText(
+                                selected.fingerprint,
+                              );
+                              setCopied(true);
+                              window.setTimeout(() => setCopied(false), 1600);
                             }}
-                            className={`grid w-full grid-cols-[1fr_92px_82px_72px] items-center gap-3 border-b border-[#202633] px-4 py-3 text-left transition-colors ${selected?.id === incident.id ? 'bg-[#1C2130]' : 'bg-[#11151D] hover:bg-[#171C26]'}`}
+                            className="flex w-full items-center gap-2 rounded-none px-3 py-2 text-left text-xs text-foreground hover:bg-muted"
                           >
-                            <span className="min-w-0">
-                              <span className="flex items-center gap-2">
-                                <span
-                                  className={`size-2 shrink-0 rounded-full ${incident.severity === 'critical' ? 'bg-[#FF4D5E]' : incident.severity === 'warning' ? 'bg-[#FF9F43]' : 'bg-[#F4D35E]'}`}
-                                />
-                                <span className="truncate text-[13px] font-medium text-[#F4F7FB]">
-                                  {incident.title}
-                                </span>
-                              </span>
-                              <span className="mt-1.5 flex gap-2 text-[11px] text-[#626C7D]">
-                                <span>#{incident.id}</span>
-                                <span>{time(incident.started)} UTC</span>
-                              </span>
-                            </span>
-                            <span className="truncate text-xs text-[#B5BECD]">
-                              {incident.service}
-                            </span>
-                            <span
-                              className={`w-fit rounded-full px-2 py-1 text-[10px] font-semibold ${resolved.includes(incident.id) ? 'bg-[#35D07F]/12 text-[#55DE96]' : incident.severity === 'critical' ? 'bg-[#FF4D5E]/12 text-[#FF6B79]' : 'bg-[#FF9F43]/12 text-[#FFB66D]'}`}
-                            >
-                              {resolved.includes(incident.id)
-                                ? 'Resolved'
-                                : incident.severity === 'critical'
-                                  ? 'Critical'
-                                  : 'Open'}
-                            </span>
-                            <span className="text-right">
-                              <span className="block text-xs text-[#D9DEEA]">
-                                {incident.logs.length}
-                              </span>
-                              <span className="mt-1 block text-[10px] text-[#FF6B79]">
-                                {incident.change}
-                              </span>
-                            </span>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="p-8 text-center text-xs text-[#8B95A7]">
-                          No incidents match this filter.
-                        </div>
-                      )}
+                            <Clipboard size={13} />
+                            {copied ? 'Copied' : 'Copy fingerprint'}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              downloadText(
+                                buildReport(selected, filename),
+                                `incident-${selected.id}-report.txt`,
+                              );
+                            }}
+                            className="flex w-full items-center gap-2 rounded-none px-3 py-2 text-left text-xs text-foreground hover:bg-muted"
+                          >
+                            <ArrowDownToLine size={13} />
+                            Export report
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
+                </div>
 
-                  {selected ? (
-                    <div className="min-w-0">
-                      <div className="border-b border-[#232936] p-4 lg:p-5">
-                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                          <div>
-                            <div className="mb-2 flex items-center gap-2 text-xs text-[#8B95A7]">
-                              <span
-                                className={`size-1.5 ${selected.severity === 'critical' ? 'bg-[#FF4D5E]' : 'bg-[#FF9F43]'}`}
+                <Card className="block py-0 border-b border-border bg-muted p-5">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 text-xs font-medium text-foreground">
+                      <Sparkles size={14} /> Likely root cause
+                    </div>
+                    <Badge
+                      variant="secondary"
+                      className="shrink-0 px-2.5 py-1 text-xs font-medium"
+                    >
+                      {selected.confidence}% confidence
+                    </Badge>
+                  </div>
+                  <p className="mt-3 text-lg font-semibold leading-snug text-foreground">
+                    {rootCauseFor(selected)}
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    CrashLens correlated service identity, event order,
+                    normalized fingerprints and nearby operational changes.
+                  </p>
+                </Card>
+
+                <Tabs
+                  value={tab}
+                  onValueChange={(value) => setTab(value as typeof tab)}
+                  className="border-b px-5 py-2"
+                >
+                  <TabsList variant="line">
+                    <TabsTrigger value="analysis">Investigation</TabsTrigger>
+                    <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                    <TabsTrigger value="logs">
+                      Logs ({selected.logs.length})
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+
+                <div
+                  className="max-h-[315px] overflow-auto p-4 lg:p-5"
+                  id="raw-logs"
+                >
+                  {tab === 'analysis' ? (
+                    <div className="space-y-5">
+                      <div className="grid gap-5 md:grid-cols-[1.05fr_.95fr]">
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-semibold text-foreground">
+                              Evidence
+                            </h3>
+                            <span className="text-xs text-muted-foreground">
+                              {selected.logs.length} correlated events
+                            </span>
+                          </div>
+                          <div className="mt-3 space-y-2.5 text-sm text-foreground">
+                            <p className="flex gap-2">
+                              <CircleCheck
+                                size={15}
+                                className="mt-0.5 shrink-0 text-success"
                               />
-                              INCIDENT #{selected.id} /{' '}
-                              {resolved.includes(selected.id)
-                                ? 'RESOLVED'
-                                : selected.status.toUpperCase()}
-                            </div>
-                            <h2 className="text-xl font-semibold tracking-[-0.03em] text-white">
-                              {selected.title}
-                            </h2>
-                            <p className="mt-1 text-xs text-[#8B95A7]">
-                              {selected.service} · {selected.logs.length}{' '}
-                              correlated events · {dateTime(selected.started)}{' '}
-                              UTC
+                              <span>
+                                <strong className="font-medium text-foreground">
+                                  {selected.service}
+                                </strong>{' '}
+                                produced the first matching error at{' '}
+                                {time(selected.started)} UTC.
+                              </span>
+                            </p>
+                            <p className="flex gap-2">
+                              <CircleCheck
+                                size={15}
+                                className="mt-0.5 shrink-0 text-success"
+                              />
+                              <span>
+                                {selected.logs.length} events share the
+                                normalized{' '}
+                                <strong className="font-medium text-foreground">
+                                  {selected.fingerprint}
+                                </strong>{' '}
+                                fingerprint.
+                              </span>
+                            </p>
+                            <p className="flex gap-2">
+                              <CircleCheck
+                                size={15}
+                                className="mt-0.5 shrink-0 text-success"
+                              />
+                              <span>
+                                {selected.timeline.some(
+                                  (event) => event.type === 'deploy',
+                                )
+                                  ? 'A deployment signal was detected near the first failure.'
+                                  : 'Event timestamps cluster inside the same operational window.'}
+                              </span>
                             </p>
                           </div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <button
+                        </div>
+                        <div className="rounded-none border border-border bg-muted p-4">
+                          <p className="text-xs font-medium text-foreground">
+                            Recommended action
+                          </p>
+                          <p className="mt-2 text-sm leading-relaxed text-foreground">
+                            Inspect the {selected.service} dependencies and
+                            recent deployment. Check its connection pool, then
+                            roll back if the error rate continues rising.
+                          </p>
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            <Button
+                              variant="default"
+                              type="button"
                               onClick={() => setTab('logs')}
-                              className="h-9 rounded-lg border border-[#2D3442] bg-[#171C26] px-3 text-xs font-medium text-[#D9DEEA] hover:bg-[#202633]"
+                              className="rounded-none bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground"
                             >
-                              View logs
-                            </button>
-                            <button
-                              onClick={() =>
-                                setResolved((items) =>
-                                  items.includes(selected.id)
-                                    ? items.filter((id) => id !== selected.id)
-                                    : [...items, selected.id],
-                                )
-                              }
-                              className="h-9 rounded-lg bg-[#7C6CFF] px-3 text-xs font-semibold text-white hover:bg-[#8A7BFF]"
+                              View related logs
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              type="button"
+                              onClick={() => setView('deployments')}
+                              className="rounded-none border border-border px-3 py-2 text-xs text-foreground"
                             >
-                              {resolved.includes(selected.id)
-                                ? 'Reopen'
-                                : 'Resolve'}
-                            </button>
-                            <div className="relative">
-                              <button
-                                aria-label="More incident actions"
-                                onClick={() => setMoreOpen((open) => !open)}
-                                className="grid size-9 place-items-center rounded-lg border border-[#2D3442] bg-[#171C26] text-[#8B95A7] hover:text-white"
-                              >
-                                <MoreHorizontal size={17} />
-                              </button>
-                              {moreOpen && (
-                                <div className="absolute right-0 top-11 z-20 w-44 rounded-lg border border-[#2D3442] bg-[#11151D] p-1.5 shadow-2xl">
-                                  <button
-                                    onClick={() => {
-                                      void navigator.clipboard.writeText(
-                                        selected.fingerprint,
-                                      );
-                                      setCopied(true);
-                                      setMoreOpen(false);
-                                      window.setTimeout(
-                                        () => setCopied(false),
-                                        1600,
-                                      );
-                                    }}
-                                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs text-[#D9DEEA] hover:bg-[#171C26]"
-                                  >
-                                    <Clipboard size={13} />
-                                    {copied ? 'Copied' : 'Copy fingerprint'}
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      downloadText(
-                                        buildReport(selected, filename),
-                                        `incident-${selected.id}-report.txt`,
-                                      );
-                                      setMoreOpen(false);
-                                    }}
-                                    className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs text-[#D9DEEA] hover:bg-[#171C26]"
-                                  >
-                                    <ArrowDownToLine size={13} />
-                                    Export report
-                                  </button>
-                                </div>
-                              )}
-                            </div>
+                              View deployment
+                            </Button>
                           </div>
                         </div>
                       </div>
-
-                      <div className="border-b border-[#232936] bg-[#171C26] p-5">
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-2 text-xs font-medium text-[#9D91FF]">
-                            <Sparkles size={14} /> Likely root cause
+                      <div className="border-t border-border pt-5">
+                        <div className="mb-3">
+                          <h3 className="text-sm font-semibold text-foreground">
+                            Causal chain
+                          </h3>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            How the signal became a production incident
+                          </p>
+                        </div>
+                        <div className="grid items-stretch gap-2 md:grid-cols-[1fr_auto_1fr_auto_1fr]">
+                          <div className="rounded-none border border-foreground/55 bg-primary/8 p-3">
+                            <p className="text-[11px] font-medium uppercase tracking-[.08em] text-foreground">
+                              Root signal
+                            </p>
+                            <p className="mt-2 text-sm font-medium text-foreground">
+                              {rootCauseFor(selected).replace(
+                                ` in ${selected.service}`,
+                                '',
+                              )}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {selected.service} · {time(selected.started)}
+                            </p>
                           </div>
-                          <span className="shrink-0 rounded-full bg-[#7C6CFF]/12 px-2.5 py-1 text-xs font-semibold text-[#9D91FF]">
-                            {selected.confidence}% confidence
+                          <ChevronRight
+                            size={18}
+                            className="mx-auto self-center rotate-90 text-muted-foreground md:rotate-0"
+                          />
+                          <Card className="block py-0 rounded-none border border-border bg-muted p-3">
+                            <p className="text-[11px] font-medium uppercase tracking-[.08em] text-muted-foreground">
+                              Incident cluster
+                            </p>
+                            <p className="mt-2 text-sm font-medium text-foreground">
+                              {selected.logs.length} matching failures
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {selected.fingerprint}
+                            </p>
+                          </Card>
+                          <ChevronRight
+                            size={18}
+                            className="mx-auto self-center rotate-90 text-muted-foreground md:rotate-0"
+                          />
+                          <div className="rounded-none border border-destructive bg-destructive/10 p-3">
+                            <p className="text-[11px] font-medium uppercase tracking-[.08em] text-destructive">
+                              Production impact
+                            </p>
+                            <p className="mt-2 text-sm font-medium text-foreground">
+                              {selected.title}
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {selected.status} · {time(selected.lastSeen)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : tab === 'timeline' ? (
+                    <div className="max-w-2xl">
+                      {selected.timeline.map((event, index) => (
+                        <div
+                          key={`${event.timestamp}-${index}`}
+                          className="grid grid-cols-[46px_18px_1fr] gap-3"
+                        >
+                          <span className="pt-0.5 text-xs text-muted-foreground">
+                            {event.time}
+                          </span>
+                          <span className="relative flex justify-center">
+                            <span
+                              className={`relative z-10 mt-0.5 size-2.5 border border-border ${event.type === 'critical' ? 'bg-destructive/10' : event.type === 'deploy' ? 'bg-primary' : event.type === 'alert' ? 'bg-warning/10' : 'bg-muted'}`}
+                            />
+                            {index < selected.timeline.length - 1 && (
+                              <span className="absolute top-2 h-full w-px bg-muted" />
+                            )}
+                          </span>
+                          <span className="pb-5">
+                            <span
+                              className={`block text-sm ${event.type === 'critical' ? 'text-destructive' : 'text-foreground'}`}
+                            >
+                              {event.title}
+                            </span>
+                            <span className="mt-0.5 block text-xs text-muted-foreground">
+                              {event.detail}
+                            </span>
                           </span>
                         </div>
-                        <p className="mt-3 text-lg font-semibold leading-snug text-white">
-                          {rootCauseFor(selected)}
-                        </p>
-                        <p className="mt-2 text-sm leading-relaxed text-[#8B95A7]">
-                          CrashLens correlated service identity, event order,
-                          normalized fingerprints and nearby operational
-                          changes.
-                        </p>
-                      </div>
-
-                      <div className="flex h-11 border-b border-[#232936] bg-[#11151D] px-4">
-                        <button
-                          onClick={() => setTab('analysis')}
-                          className={`mr-6 border-b-2 px-1 text-xs font-bold ${tab === 'analysis' ? 'border-[#7C6CFF] text-[#7C6CFF]' : 'border-transparent text-[#8B95A7]'}`}
-                        >
-                          AI INVESTIGATION
-                        </button>
-                        <button
-                          onClick={() => setTab('timeline')}
-                          className={`mr-6 border-b-2 px-1 text-xs font-bold ${tab === 'timeline' ? 'border-[#7C6CFF] text-[#7C6CFF]' : 'border-transparent text-[#8B95A7]'}`}
-                        >
-                          TIMELINE
-                        </button>
-                        <button
-                          onClick={() => setTab('logs')}
-                          className={`border-b-2 px-1 text-xs font-bold ${tab === 'logs' ? 'border-[#7C6CFF] text-[#7C6CFF]' : 'border-transparent text-[#8B95A7]'}`}
-                        >
-                          LOGS ({selected.logs.length})
-                        </button>
-                      </div>
-
-                      <div
-                        className="max-h-[315px] overflow-auto p-4 lg:p-5"
-                        id="raw-logs"
-                      >
-                        {tab === 'analysis' ? (
-                          <div className="space-y-5">
-                            <div className="grid gap-5 md:grid-cols-[1.05fr_.95fr]">
-                              <div>
-                                <div className="flex items-center justify-between">
-                                  <h3 className="text-sm font-semibold text-white">
-                                    Evidence
-                                  </h3>
-                                  <span className="text-xs text-[#626C7D]">
-                                    {selected.logs.length} correlated events
-                                  </span>
-                                </div>
-                                <div className="mt-3 space-y-2.5 text-sm text-[#B5BECD]">
-                                  <p className="flex gap-2">
-                                    <CircleCheck
-                                      size={15}
-                                      className="mt-0.5 shrink-0 text-[#35D07F]"
-                                    />
-                                    <span>
-                                      <strong className="font-medium text-white">
-                                        {selected.service}
-                                      </strong>{' '}
-                                      produced the first matching error at{' '}
-                                      {time(selected.started)} UTC.
-                                    </span>
-                                  </p>
-                                  <p className="flex gap-2">
-                                    <CircleCheck
-                                      size={15}
-                                      className="mt-0.5 shrink-0 text-[#35D07F]"
-                                    />
-                                    <span>
-                                      {selected.logs.length} events share the
-                                      normalized{' '}
-                                      <strong className="font-medium text-white">
-                                        {selected.fingerprint}
-                                      </strong>{' '}
-                                      fingerprint.
-                                    </span>
-                                  </p>
-                                  <p className="flex gap-2">
-                                    <CircleCheck
-                                      size={15}
-                                      className="mt-0.5 shrink-0 text-[#35D07F]"
-                                    />
-                                    <span>
-                                      {selected.timeline.some(
-                                        (event) => event.type === 'deploy',
-                                      )
-                                        ? 'A deployment signal was detected near the first failure.'
-                                        : 'Event timestamps cluster inside the same operational window.'}
-                                    </span>
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="rounded-lg border border-[#2D3442] bg-[#0D1017] p-4">
-                                <p className="text-xs font-medium text-[#9D91FF]">
-                                  Recommended action
-                                </p>
-                                <p className="mt-2 text-sm leading-relaxed text-[#D9DEEA]">
-                                  Inspect the {selected.service} dependencies
-                                  and recent deployment. Check its connection
-                                  pool, then roll back if the error rate
-                                  continues rising.
-                                </p>
-                                <div className="mt-4 flex flex-wrap gap-2">
-                                  <button
-                                    onClick={() => setTab('logs')}
-                                    className="rounded-lg bg-[#7C6CFF] px-3 py-2 text-xs font-semibold text-white"
-                                  >
-                                    View related logs
-                                  </button>
-                                  <button
-                                    onClick={() => setView('deployments')}
-                                    className="rounded-lg border border-[#2D3442] px-3 py-2 text-xs text-[#D9DEEA]"
-                                  >
-                                    View deployment
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="border-t border-[#232936] pt-5">
-                              <div className="mb-3">
-                                <h3 className="text-sm font-semibold text-white">
-                                  Causal chain
-                                </h3>
-                                <p className="mt-1 text-xs text-[#626C7D]">
-                                  How the signal became a production incident
-                                </p>
-                              </div>
-                              <div className="grid items-stretch gap-2 md:grid-cols-[1fr_auto_1fr_auto_1fr]">
-                                <div className="rounded-lg border border-[#7C6CFF]/55 bg-[#7C6CFF]/8 p-3">
-                                  <p className="text-[11px] font-medium uppercase tracking-[.08em] text-[#9D91FF]">
-                                    Root signal
-                                  </p>
-                                  <p className="mt-2 text-sm font-medium text-white">
-                                    {rootCauseFor(selected).replace(
-                                      ` in ${selected.service}`,
-                                      '',
-                                    )}
-                                  </p>
-                                  <p className="mt-1 text-xs text-[#8B95A7]">
-                                    {selected.service} ·{' '}
-                                    {time(selected.started)}
-                                  </p>
-                                </div>
-                                <ChevronRight
-                                  size={18}
-                                  className="mx-auto self-center rotate-90 text-[#626C7D] md:rotate-0"
-                                />
-                                <div className="rounded-lg border border-[#2D3442] bg-[#171C26] p-3">
-                                  <p className="text-[11px] font-medium uppercase tracking-[.08em] text-[#8B95A7]">
-                                    Incident cluster
-                                  </p>
-                                  <p className="mt-2 text-sm font-medium text-white">
-                                    {selected.logs.length} matching failures
-                                  </p>
-                                  <p className="mt-1 text-xs text-[#8B95A7]">
-                                    {selected.fingerprint}
-                                  </p>
-                                </div>
-                                <ChevronRight
-                                  size={18}
-                                  className="mx-auto self-center rotate-90 text-[#626C7D] md:rotate-0"
-                                />
-                                <div className="rounded-lg border border-[#FF4D5E]/45 bg-[#FF4D5E]/8 p-3">
-                                  <p className="text-[11px] font-medium uppercase tracking-[.08em] text-[#FF6B79]">
-                                    Production impact
-                                  </p>
-                                  <p className="mt-2 text-sm font-medium text-white">
-                                    {selected.title}
-                                  </p>
-                                  <p className="mt-1 text-xs text-[#8B95A7]">
-                                    {selected.status} ·{' '}
-                                    {time(selected.lastSeen)}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ) : tab === 'timeline' ? (
-                          <div className="max-w-2xl">
-                            {selected.timeline.map((event, index) => (
-                              <div
-                                key={`${event.timestamp}-${index}`}
-                                className="grid grid-cols-[46px_18px_1fr] gap-3"
-                              >
-                                <span className="pt-0.5 text-xs text-[#8B95A7]">
-                                  {event.time}
-                                </span>
-                                <span className="relative flex justify-center">
-                                  <span
-                                    className={`relative z-10 mt-0.5 size-2.5 border border-[#11151D] ${event.type === 'critical' ? 'bg-[#FF4D5E]' : event.type === 'deploy' ? 'bg-[#7C6CFF]' : event.type === 'alert' ? 'bg-[#FF9F43]' : 'bg-[#757575]'}`}
-                                  />
-                                  {index < selected.timeline.length - 1 && (
-                                    <span className="absolute top-2 h-full w-px bg-[#2D3442]" />
-                                  )}
-                                </span>
-                                <span className="pb-5">
-                                  <span
-                                    className={`block text-sm ${event.type === 'critical' ? 'text-[#FF6B79]' : 'text-[#D9DEEA]'}`}
-                                  >
-                                    {event.title}
-                                  </span>
-                                  <span className="mt-0.5 block text-xs text-[#626C7D]">
-                                    {event.detail}
-                                  </span>
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="min-w-[650px] text-xs">
-                            <div className="grid grid-cols-[70px_58px_130px_1fr] border-b border-[#2D3442] pb-2 text-[#626C7D]">
-                              <span>TIME</span>
-                              <span>LEVEL</span>
-                              <span>SERVICE</span>
-                              <span>MESSAGE</span>
-                            </div>
-                            {selected.logs.map((log) => (
-                              <div
-                                key={log.id}
-                                className="grid grid-cols-[70px_58px_130px_1fr] border-b border-[#202633] py-2 text-[#B5BECD]"
-                              >
-                                <span>{time(log.timestamp)}</span>
-                                <span
-                                  className={
-                                    log.level === 'fatal' ||
-                                    log.level === 'error'
-                                      ? 'text-[#FF6B79]'
-                                      : 'text-[#FF9F43]'
-                                  }
-                                >
-                                  {log.level.toUpperCase()}
-                                </span>
-                                <span className="truncate pr-3 text-[#7C6CFF]">
-                                  {log.service}
-                                </span>
-                                <span className="truncate">{log.message}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      ))}
                     </div>
                   ) : (
-                    <div className="grid place-items-center p-10 text-xs text-[#8B95A7]">
-                      Upload a file containing errors to create an incident.
+                    <div className="min-w-[650px] text-xs">
+                      <div className="grid grid-cols-[70px_58px_130px_1fr] border-b border-border pb-2 text-muted-foreground">
+                        <span>TIME</span>
+                        <span>LEVEL</span>
+                        <span>SERVICE</span>
+                        <span>MESSAGE</span>
+                      </div>
+                      {selected.logs.map((log) => (
+                        <div
+                          key={log.id}
+                          className="grid grid-cols-[70px_58px_130px_1fr] border-b border-border py-2 text-foreground"
+                        >
+                          <span>{time(log.timestamp)}</span>
+                          <span
+                            className={
+                              log.level === 'fatal' || log.level === 'error'
+                                ? 'text-destructive'
+                                : 'text-warning'
+                            }
+                          >
+                            {log.level.toUpperCase()}
+                          </span>
+                          <span className="truncate pr-3 text-foreground">
+                            {log.service}
+                          </span>
+                          <span className="truncate">{log.message}</span>
+                        </div>
+                      ))}
                     </div>
                   )}
-                </section>
-              </>
-            ) : view === 'intelligence' ? (
-              <ProductionIntelligencePanel />
-            ) : [
-                'overview',
-                'logs',
-                'services',
-                'deployments',
-                'settings',
-              ].includes(view) ? (
-              <LocalDataConsole
-                view={
-                  view as
-                    | 'overview'
-                    | 'logs'
-                    | 'services'
-                    | 'deployments'
-                    | 'settings'
-                }
-                logs={logs}
-                incidents={incidents}
-                resolved={resolved}
-                query={query}
-                filename={filename}
-                workspace={workspace}
-                onUpload={() => setUploadOpen(true)}
-              />
-            ) : (
-              <OperationsConsole
-                view={view}
-                workspace={workspace}
-                health={health}
-                busy={workspaceBusy}
-                inviteEmail={inviteEmail}
-                setInviteEmail={setInviteEmail}
-                comment={comment}
-                setComment={setComment}
-                historyIncidentId={historyIncidentId}
-                setHistoryIncidentId={setHistoryIncidentId}
-                action={workspaceAction}
-              />
-            )}
-          </div>
-        </div>
-      </div>
-
-      {uploadOpen && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-[#090B0F] p-4">
-          <div className="w-full max-w-xl border-2 border-[#7C6CFF] bg-[#171C26] shadow-2xl">
-            <div className="flex items-start justify-between border-b border-[#232936] p-5">
-              <div>
-                <p className="text-xs text-[#7C6CFF]">Log upload</p>
-                <h2 className="mt-1 text-lg font-semibold text-white">
-                  Analyze a log file
-                </h2>
-                <p className="mt-1 text-sm text-[#8B95A7]">
-                  Analysis runs in the browser, then a redacted copy is saved to
-                  your authenticated workspace.
-                </p>
+                </div>
               </div>
-              <button
-                onClick={() => setUploadOpen(false)}
-                className="text-[#8B95A7] hover:text-white"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <input
-              ref={inputRef}
-              type="file"
-              accept=".txt,.log,.csv,.jsonl,.ndjson"
-              onChange={onFile}
-              className="hidden"
-            />
-            <button
-              type="button"
-              onDragOver={(event) => {
-                event.preventDefault();
-                setDragging(true);
-              }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={onDrop}
-              onClick={() => inputRef.current?.click()}
-              className={`m-5 grid min-h-52 w-[calc(100%-2.5rem)] cursor-pointer place-items-center border border-dashed p-6 text-center ${dragging ? 'border-[#7C6CFF] bg-[#1C2130]' : 'border-[#353D4D] bg-[#0D1017] hover:border-[#8B95A7]'}`}
-            >
-              {processing ? (
-                <span>
-                  <LoaderCircle
-                    size={26}
-                    className="mx-auto animate-spin text-[#7C6CFF]"
-                  />
-                  <span className="mt-3 block text-xs text-[#7C6CFF]">
-                    PARSING + CLUSTERING
-                  </span>
-                </span>
-              ) : (
-                <span>
-                  <Upload size={25} className="mx-auto text-[#7C6CFF]" />
-                  <span className="mt-3 block text-sm font-medium text-white">
-                    Drop a file here or click to browse
-                  </span>
-                  <span className="mt-2 block text-xs text-[#8B95A7]">
-                    TXT · LOG · CSV · JSONL · NDJSON / MAX 5 MB
-                  </span>
-                </span>
-              )}
-            </button>
-            {error && (
-              <p className="mx-5 mb-3 border border-[#8f3333] bg-[#210d0f] p-3 text-xs text-[#FF6B79]">
-                {error}
-              </p>
+            ) : (
+              <Empty className="min-h-80 p-10">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <ScanSearch />
+                  </EmptyMedia>
+                  <EmptyTitle>No investigation selected</EmptyTitle>
+                  <EmptyDescription>
+                    Upload your application logs to group related errors and see
+                    what happened.
+                  </EmptyDescription>
+                </EmptyHeader>
+                <Button variant="outline" onClick={() => setUploadOpen(true)}>
+                  <Upload />
+                  Upload your first logs
+                </Button>
+              </Empty>
             )}
-            <div className="border-t border-[#232936] bg-[#0D1017] p-5 text-xs leading-5 text-[#8B95A7]">
-              Upload logs exported by your application, container platform, or
-              observability provider. CrashLens will not create artificial
-              incidents.
-            </div>
-          </div>
-        </div>
+          </Card>
+        </>
+      ) : view === 'intelligence' ? (
+        <ProductionIntelligencePanel />
+      ) : ['overview', 'logs', 'services', 'deployments', 'settings'].includes(
+          view,
+        ) ? (
+        <LocalDataConsole
+          view={
+            view as
+              | 'overview'
+              | 'logs'
+              | 'services'
+              | 'deployments'
+              | 'settings'
+          }
+          logs={logs}
+          incidents={incidents}
+          resolved={resolved}
+          query={query}
+          filename={filename}
+          workspace={workspace}
+          onUpload={() => setUploadOpen(true)}
+        />
+      ) : (
+        <OperationsConsole
+          view={view}
+          workspace={workspace}
+          health={health}
+          busy={workspaceBusy}
+          inviteEmail={inviteEmail}
+          setInviteEmail={setInviteEmail}
+          comment={comment}
+          setComment={setComment}
+          historyIncidentId={historyIncidentId}
+          setHistoryIncidentId={setHistoryIncidentId}
+          action={workspaceAction}
+        />
       )}
-    </main>
+      <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+        <DialogContent className="sm:max-w-xl p-0 gap-0">
+          <DialogHeader className="p-6 border-b">
+            <DialogTitle className="text-xl">Upload log file</DialogTitle>
+            <DialogDescription>
+              Find related errors and build an incident timeline. Sensitive data
+              is redacted before saving.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            ref={inputRef}
+            type="file"
+            accept=".txt,.log,.csv,.jsonl,.ndjson"
+            onChange={onFile}
+            className="hidden"
+          />
+          <Button
+            variant="ghost"
+            type="button"
+            onDragOver={(event) => {
+              event.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDrop}
+            onClick={() => inputRef.current?.click()}
+            className={`m-5 grid h-auto min-h-52 w-[calc(100%-2.5rem)] cursor-pointer place-items-center whitespace-normal border border-dashed p-6 text-center ${dragging ? 'border-foreground bg-muted' : 'border-border bg-muted hover:border-border'}`}
+          >
+            {processing ? (
+              <span>
+                <LoaderCircle
+                  size={26}
+                  className="mx-auto animate-spin text-foreground"
+                />
+                <span className="mt-3 block text-xs text-foreground">
+                  PARSING + CLUSTERING
+                </span>
+              </span>
+            ) : (
+              <span>
+                <Upload size={25} className="mx-auto text-foreground" />
+                <span className="mt-3 block text-sm font-medium text-foreground">
+                  Drop a file here or click to browse
+                </span>
+                <span className="mt-2 block text-xs text-muted-foreground">
+                  TXT · LOG · CSV · JSONL · NDJSON / MAX 5 MB
+                </span>
+              </span>
+            )}
+          </Button>
+          {error && (
+            <p className="mx-5 mb-3 border border-destructive bg-destructive/10 p-3 text-xs text-destructive">
+              {error}
+            </p>
+          )}
+          <div className="border-t border-border bg-muted p-5 text-xs leading-5 text-muted-foreground">
+            Upload logs exported by your application, container platform, or
+            observability provider. CrashLens will not create artificial
+            incidents.
+          </div>
+        </DialogContent>
+      </Dialog>
+    </WorkspaceShell>
   );
 }
 
@@ -1356,19 +1156,19 @@ function LocalDataConsole({
       .map((event) => ({ ...event, incident })),
   );
   const panel =
-    'overflow-hidden rounded-xl border border-[#232936] bg-[#11151D] shadow-[0_12px_34px_rgba(0,0,0,.14)]';
+    'overflow-hidden rounded-none border border-border bg-background shadow-none';
 
   if (view === 'overview')
     return (
       <div className="grid gap-5 xl:grid-cols-[1.3fr_.7fr]">
         <section className={panel}>
-          <div className="border-b border-[#232936] p-5">
+          <div className="border-b border-border p-5">
             <h2 className="font-semibold">Production health</h2>
-            <p className="mt-1 text-sm text-[#8B95A7]">
+            <p className="mt-1 text-sm text-muted-foreground">
               Live signals from the current dataset
             </p>
           </div>
-          <div className="grid gap-px bg-[#232936] sm:grid-cols-3">
+          <div className="grid gap-px bg-muted sm:grid-cols-3">
             {[
               ['Open incidents', incidents.length - resolved.length],
               [
@@ -1377,17 +1177,17 @@ function LocalDataConsole({
               ],
               ['Services', services.length],
             ].map(([label, value]) => (
-              <div key={label} className="bg-[#11151D] p-5">
-                <p className="text-xs text-[#8B95A7]">{label}</p>
+              <div key={label} className="bg-background p-5">
+                <p className="text-xs text-muted-foreground">{label}</p>
                 <p className="mt-2 text-3xl font-semibold">{value}</p>
               </div>
             ))}
           </div>
           <div className="p-5">
-            <div className="flex items-center gap-2 text-sm text-[#35D07F]">
+            <div className="flex items-center gap-2 text-sm text-success">
               <CheckCircle2 size={16} /> Log ingestion is operational
             </div>
-            <p className="mt-2 text-xs text-[#626C7D]">
+            <p className="mt-2 text-xs text-muted-foreground">
               {filename
                 ? `${logs.length} events parsed from ${filename}`
                 : 'No log source is connected yet.'}
@@ -1395,28 +1195,30 @@ function LocalDataConsole({
           </div>
         </section>
         <section className={panel}>
-          <div className="border-b border-[#232936] p-5">
+          <div className="border-b border-border p-5">
             <h2 className="font-semibold">Needs attention</h2>
           </div>
-          <div className="divide-y divide-[#232936]">
+          <div className="divide-y divide-[#e5e5e5]">
             {incidents.slice(0, 4).map((incident) => (
-              <button
+              <Button
+                variant="ghost"
+                type="button"
                 key={incident.id}
-                className="flex w-full items-center gap-3 p-4 text-left hover:bg-[#171C26]"
+                className="flex w-full items-center gap-3 p-4 text-left hover:bg-muted"
               >
                 <span
-                  className={`size-2 rounded-full ${incident.severity === 'critical' ? 'bg-[#FF4D5E]' : 'bg-[#FF9F43]'}`}
+                  className={`size-2 rounded-full ${incident.severity === 'critical' ? 'bg-destructive/10' : 'bg-warning/10'}`}
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm">
                     {incident.title}
                   </span>
-                  <span className="mt-1 block text-xs text-[#626C7D]">
+                  <span className="mt-1 block text-xs text-muted-foreground">
                     {incident.service}
                   </span>
                 </span>
-                <ChevronRight size={15} className="text-[#626C7D]" />
-              </button>
+                <ChevronRight size={15} className="text-muted-foreground" />
+              </Button>
             ))}
           </div>
         </section>
@@ -1426,46 +1228,50 @@ function LocalDataConsole({
   if (view === 'logs')
     return (
       <section className={panel}>
-        <div className="flex items-center justify-between border-b border-[#232936] p-5">
+        <div className="flex items-center justify-between border-b border-border p-5">
           <div>
             <h2 className="font-semibold">Event stream</h2>
-            <p className="mt-1 text-xs text-[#8B95A7]">
+            <p className="mt-1 text-xs text-muted-foreground">
               {visibleLogs.length} matching log events
             </p>
           </div>
-          <button
+          <Button
+            variant="default"
+            type="button"
             onClick={onUpload}
-            className="rounded-lg bg-[#7C6CFF] px-4 py-2 text-xs font-semibold"
+            className="rounded-none bg-primary px-4 py-2 text-xs font-semibold"
           >
             Upload logs
-          </button>
+          </Button>
         </div>
         <div className="overflow-x-auto">
           <div className="min-w-[760px]">
-            <div className="grid grid-cols-[100px_80px_150px_1fr] gap-3 border-b border-[#232936] px-5 py-3 text-[10px] uppercase tracking-[.08em] text-[#626C7D]">
+            <div className="grid grid-cols-[100px_80px_150px_1fr] gap-3 border-b border-border px-5 py-3 text-[10px] uppercase tracking-[.08em] text-muted-foreground">
               <span>Time</span>
               <span>Level</span>
               <span>Service</span>
               <span>Message</span>
             </div>
             {visibleLogs.slice(0, 100).map((log) => (
-              <div
+              <Card
                 key={log.id}
-                className="grid grid-cols-[100px_80px_150px_1fr] gap-3 border-b border-[#202633] px-5 py-3 text-xs hover:bg-[#171C26]"
+                className="block py-0 grid grid-cols-[100px_80px_150px_1fr] gap-3 border-b border-border px-5 py-3 text-xs hover:bg-muted"
               >
-                <span className="text-[#8B95A7]">{time(log.timestamp)}</span>
+                <span className="text-muted-foreground">
+                  {time(log.timestamp)}
+                </span>
                 <span
                   className={
                     log.level === 'error' || log.level === 'fatal'
-                      ? 'text-[#FF6B79]'
-                      : 'text-[#F4D35E]'
+                      ? 'text-destructive'
+                      : 'text-warning'
                   }
                 >
                   {log.level}
                 </span>
                 <span>{log.service}</span>
-                <span className="truncate text-[#B5BECD]">{log.message}</span>
-              </div>
+                <span className="truncate text-foreground">{log.message}</span>
+              </Card>
             ))}
           </div>
         </div>
@@ -1475,9 +1281,9 @@ function LocalDataConsole({
   if (view === 'services')
     return (
       <section className={panel}>
-        <div className="border-b border-[#232936] p-5">
+        <div className="border-b border-border p-5">
           <h2 className="font-semibold">Services</h2>
-          <p className="mt-1 text-sm text-[#8B95A7]">
+          <p className="mt-1 text-sm text-muted-foreground">
             Health inferred from ingested production signals
           </p>
         </div>
@@ -1485,22 +1291,22 @@ function LocalDataConsole({
           {services.map((service) => (
             <article
               key={service.name}
-              className="rounded-xl border border-[#232936] bg-[#0D1017] p-4"
+              className="rounded-none border border-border bg-muted p-4"
             >
               <div className="flex items-center justify-between">
-                <Server size={17} className="text-[#9D91FF]" />
-                <span
-                  className={`rounded-full px-2 py-1 text-[10px] ${service.errors ? 'bg-[#FF4D5E]/12 text-[#FF6B79]' : 'bg-[#35D07F]/12 text-[#55DE96]'}`}
+                <Server size={17} className="text-foreground" />
+                <Badge
+                  className={`rounded-full px-2 py-1 text-[10px] ${service.errors ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'}`}
                 >
                   {service.errors ? 'Degraded' : 'Healthy'}
-                </span>
+                </Badge>
               </div>
               <h3 className="mt-4 text-sm font-semibold">{service.name}</h3>
-              <div className="mt-3 flex gap-4 text-xs text-[#8B95A7]">
+              <div className="mt-3 flex gap-4 text-xs text-muted-foreground">
                 <span>{service.events} events</span>
                 <span>{service.errors} errors</span>
               </div>
-              <p className="mt-2 text-[11px] text-[#626C7D]">
+              <p className="mt-2 text-[11px] text-muted-foreground">
                 Last seen {service.lastSeen ? dateTime(service.lastSeen) : '—'}{' '}
                 UTC
               </p>
@@ -1513,36 +1319,36 @@ function LocalDataConsole({
   if (view === 'deployments')
     return (
       <section className={panel}>
-        <div className="border-b border-[#232936] p-5">
+        <div className="border-b border-border p-5">
           <h2 className="font-semibold">Deployment correlations</h2>
-          <p className="mt-1 text-sm text-[#8B95A7]">
+          <p className="mt-1 text-sm text-muted-foreground">
             Changes detected near incident start times
           </p>
         </div>
         {deployments.length ? (
-          <div className="divide-y divide-[#232936]">
+          <div className="divide-y divide-[#e5e5e5]">
             {deployments.map((deployment, index) => (
               <div
                 key={`${deployment.timestamp}-${index}`}
                 className="grid gap-3 p-5 md:grid-cols-[120px_1fr_160px]"
               >
-                <span className="text-xs text-[#8B95A7]">
+                <span className="text-xs text-muted-foreground">
                   {dateTime(deployment.timestamp)} UTC
                 </span>
                 <span>
                   <span className="block text-sm">{deployment.title}</span>
-                  <span className="mt-1 block text-xs text-[#626C7D]">
+                  <span className="mt-1 block text-xs text-muted-foreground">
                     {deployment.detail}
                   </span>
                 </span>
-                <span className="text-xs text-[#FF9F43]">
+                <span className="text-xs text-warning">
                   Linked to #{deployment.incident.id}
                 </span>
               </div>
             ))}
           </div>
         ) : (
-          <div className="p-10 text-center text-sm text-[#8B95A7]">
+          <div className="p-10 text-center text-sm text-muted-foreground">
             No deployment events were found in this dataset.
           </div>
         )}
@@ -1551,9 +1357,9 @@ function LocalDataConsole({
 
   return (
     <section className={panel}>
-      <div className="border-b border-[#232936] p-5">
+      <div className="border-b border-border p-5">
         <h2 className="font-semibold">Workspace settings</h2>
-        <p className="mt-1 text-sm text-[#8B95A7]">
+        <p className="mt-1 text-sm text-muted-foreground">
           Account, storage and analysis configuration
         </p>
       </div>
@@ -1566,26 +1372,28 @@ function LocalDataConsole({
         ].map(([label, value]) => (
           <div
             key={label}
-            className="rounded-xl border border-[#232936] bg-[#0D1017] p-4"
+            className="rounded-none border border-border bg-muted p-4"
           >
-            <p className="text-xs text-[#626C7D]">{label}</p>
-            <p className="mt-2 text-sm text-[#D9DEEA]">{value}</p>
+            <p className="text-xs text-muted-foreground">{label}</p>
+            <p className="mt-2 text-sm text-foreground">{value}</p>
           </div>
         ))}
       </div>
-      <div className="flex gap-3 border-t border-[#232936] p-5">
+      <div className="flex gap-3 border-t border-border p-5">
         <Link
           href="/account"
-          className="rounded-lg bg-[#7C6CFF] px-4 py-2 text-xs font-semibold"
+          className="rounded-none bg-primary px-4 py-2 text-xs font-semibold"
         >
           Manage account
         </Link>
-        <button
+        <Button
+          variant="ghost"
+          type="button"
           onClick={onUpload}
-          className="rounded-lg border border-[#2D3442] px-4 py-2 text-xs text-[#D9DEEA]"
+          className="rounded-none border border-border px-4 py-2 text-xs text-foreground"
         >
           Change data source
-        </button>
+        </Button>
       </div>
     </section>
   );
@@ -1639,95 +1447,103 @@ function OperationsConsole({
 
   if (!workspace)
     return (
-      <section className="grid min-h-72 place-items-center border border-[#232936] bg-[#11151D] p-10 text-center">
+      <Card className="block py-0 grid min-h-72 place-items-center border border-border bg-background p-10 text-center">
         <div>
           <LoaderCircle
-            className="mx-auto mb-3 animate-spin text-[#7C6CFF]"
+            className="mx-auto mb-3 animate-spin text-foreground"
             size={22}
           />
-          <p className="text-sm text-white">
+          <p className="text-sm text-foreground">
             Connecting authenticated workspace
           </p>
-          <p className="mt-1 text-xs text-[#8B95A7]">
+          <p className="mt-1 text-xs text-muted-foreground">
             The local analyzer remains available while services initialize.
           </p>
         </div>
-      </section>
+      </Card>
     );
 
   if (view === 'clients') return <AdminClientsPanel />;
 
   if (view === 'history')
     return (
-      <section className="grid min-h-[620px] border border-[#232936] bg-[#11151D] xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,.7fr)]">
-        <div className="border-b border-[#232936] xl:border-b-0 xl:border-r">
-          <div className="flex items-center justify-between border-b border-[#232936] p-4">
+      <Card className="block py-0 grid min-h-[620px] border border-border bg-background xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,.7fr)]">
+        <div className="border-b border-border xl:border-b-0 xl:border-r">
+          <div className="flex items-center justify-between border-b border-border p-4">
             <div>
-              <p className="text-xs text-[#7C6CFF]">
+              <p className="text-xs text-foreground">
                 PERSISTENT INCIDENT HISTORY
               </p>
-              <p className="mt-1 text-xs text-[#8B95A7]">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {workspace.ingestionCount} saved ingestion runs · refreshes
                 every 15 seconds
               </p>
             </div>
-            <History size={18} className="text-[#8B95A7]" />
+            <History size={18} className="text-muted-foreground" />
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px] text-left text-sm">
-              <thead className="bg-[#0D1017] text-xs text-[#8B95A7]">
-                <tr>
-                  <th className="p-3">INCIDENT</th>
-                  <th>SERVICE</th>
-                  <th>SEVERITY</th>
-                  <th>STATUS</th>
-                  <th>ASSIGNEE</th>
-                  <th>UPDATED</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table className="w-full min-w-[700px] text-left text-sm">
+              <TableHeader className="bg-muted text-xs text-muted-foreground">
+                <TableRow>
+                  <TableHead className="p-3">INCIDENT</TableHead>
+                  <TableHead>SERVICE</TableHead>
+                  <TableHead>SEVERITY</TableHead>
+                  <TableHead>STATUS</TableHead>
+                  <TableHead>ASSIGNEE</TableHead>
+                  <TableHead>UPDATED</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {workspace.incidents.map((incident) => (
-                  <tr
+                  <TableRow
                     key={String(incident.id)}
                     onClick={() => setHistoryIncidentId(String(incident.id))}
-                    className={`cursor-pointer border-t border-[#202633] ${historyIncidentId === String(incident.id) ? 'bg-[#1C2130]' : 'hover:bg-[#171C26]'}`}
+                    className={`cursor-pointer border-t border-border ${historyIncidentId === String(incident.id) ? 'bg-muted' : 'hover:bg-muted'}`}
                   >
-                    <td className="p-3 text-white">{String(incident.title)}</td>
-                    <td className="text-[#9D91FF]">
+                    <TableCell className="p-3 text-foreground">
+                      {String(incident.title)}
+                    </TableCell>
+                    <TableCell className="text-foreground">
                       {String(incident.service)}
-                    </td>
-                    <td className="text-[#FF6B79]">
+                    </TableCell>
+                    <TableCell className="text-destructive">
                       {String(incident.severity).toUpperCase()}
-                    </td>
-                    <td>{String(incident.status)}</td>
-                    <td>{String(incident.assignee_name ?? 'Unassigned')}</td>
-                    <td className="text-[#8B95A7]">
+                    </TableCell>
+                    <TableCell>{String(incident.status)}</TableCell>
+                    <TableCell>
+                      {String(incident.assignee_name ?? 'Unassigned')}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
                       {dateTime(String(incident.updated_at))}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
             {!workspace.incidents.length && (
-              <p className="p-10 text-center text-xs text-[#8B95A7]">
+              <p className="p-10 text-center text-xs text-muted-foreground">
                 Upload a log file to create durable incident history.
               </p>
             )}
           </div>
         </div>
         <div className="p-4 lg:p-5">
-          <p className="text-xs text-[#8B95A7]">INCIDENT COLLABORATION</p>
+          <p className="text-xs text-muted-foreground">
+            INCIDENT COLLABORATION
+          </p>
           {selectedHistory ? (
             <>
-              <h2 className="mt-2 text-lg font-semibold text-white">
+              <h2 className="mt-2 text-lg font-semibold text-foreground">
                 {String(selectedHistory.title)}
               </h2>
-              <p className="mt-1 text-xs text-[#8B95A7]">
+              <p className="mt-1 text-xs text-muted-foreground">
                 #{String(selectedHistory.id)} ·{' '}
                 {String(selectedHistory.fingerprint)}
               </p>
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <button
+                <Button
+                  variant="ghost"
+                  type="button"
                   disabled={busy}
                   onClick={() =>
                     void action({
@@ -1737,11 +1553,13 @@ function OperationsConsole({
                       assignedTo: workspace.user.id,
                     })
                   }
-                  className="border border-[#9D91FF] p-2 text-xs font-bold text-[#9D91FF] disabled:opacity-50"
+                  className="border border-foreground p-2 text-xs font-bold text-foreground disabled:opacity-50"
                 >
                   ASSIGN TO ME
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
+                  type="button"
                   disabled={busy}
                   onClick={() =>
                     void action({
@@ -1750,10 +1568,10 @@ function OperationsConsole({
                       status: 'resolved',
                     })
                   }
-                  className="border border-[#7C6CFF] p-2 text-xs font-bold text-[#7C6CFF] disabled:opacity-50"
+                  className="border border-foreground p-2 text-xs font-bold text-foreground disabled:opacity-50"
                 >
                   RESOLVE
-                </button>
+                </Button>
               </div>
               <form
                 onSubmit={async (event) => {
@@ -1769,31 +1587,33 @@ function OperationsConsole({
                 }}
                 className="mt-5"
               >
-                <label
+                <Label
                   htmlFor="incident-comment"
-                  className="text-xs text-[#8B95A7]"
+                  className="text-xs text-muted-foreground"
                 >
                   ADD INVESTIGATION NOTE
-                </label>
-                <textarea
+                </Label>
+                <Textarea
                   id="incident-comment"
                   value={comment}
                   onChange={(event) => setComment(event.target.value)}
                   required
                   maxLength={2000}
-                  className="mt-2 h-24 w-full resize-none border border-[#2D3442] bg-[#0D1017] p-3 text-xs text-white outline-none focus:border-[#7C6CFF]"
+                  className="mt-2 h-24 w-full resize-none border border-border bg-muted p-3 text-xs text-foreground outline-none focus:border-foreground"
                   placeholder="What did you find?"
                 />
-                <button
+                <Button
+                  variant="default"
+                  type="submit"
                   disabled={busy}
-                  className="mt-2 flex h-9 items-center gap-2 bg-[#7C6CFF] px-4 text-xs font-bold text-black disabled:opacity-50"
+                  className="mt-2 flex h-9 items-center gap-2 bg-primary px-4 text-xs font-bold text-primary-foreground disabled:opacity-50"
                 >
                   <Send size={12} />
                   POST NOTE
-                </button>
+                </Button>
               </form>
-              <div className="mt-5 border-t border-[#232936] pt-4">
-                <p className="text-xs text-[#8B95A7]">RECENT NOTES</p>
+              <div className="mt-5 border-t border-border pt-4">
+                <p className="text-xs text-muted-foreground">RECENT NOTES</p>
                 {workspace.comments
                   .filter(
                     (item) =>
@@ -1801,65 +1621,67 @@ function OperationsConsole({
                   )
                   .slice(0, 5)
                   .map((item) => (
-                    <div
+                    <Card
                       key={String(item.id)}
-                      className="mt-2 border-l-2 border-[#353D4D] bg-[#171C26] p-3"
+                      className="block py-0 mt-2 border-l-2 border-border bg-muted p-3"
                     >
-                      <p className="text-xs text-[#c0c0c0]">
+                      <p className="text-xs text-foreground">
                         {String(item.body)}
                       </p>
-                      <p className="mt-2 text-xs text-[#626C7D]">
+                      <p className="mt-2 text-xs text-muted-foreground">
                         {String(item.user_name ?? item.user_email)} ·{' '}
                         {dateTime(String(item.created_at))}
                       </p>
-                    </div>
+                    </Card>
                   ))}
               </div>
             </>
           ) : (
-            <p className="mt-5 text-xs text-[#8B95A7]">
+            <p className="mt-5 text-xs text-muted-foreground">
               Select an incident to collaborate.
             </p>
           )}
         </div>
-      </section>
+      </Card>
     );
 
   if (view === 'team')
     return (
       <section className="grid gap-4 lg:grid-cols-2">
-        <article className="border border-[#232936] bg-[#11151D]">
-          <div className="border-b border-[#232936] p-4">
-            <p className="text-xs text-[#7C6CFF]">TEAM MEMBERS</p>
-            <h2 className="mt-1 text-lg text-white">{workspace.team.name}</h2>
+        <Card className="block py-0 border border-border bg-background">
+          <div className="border-b border-border p-4">
+            <p className="text-xs text-foreground">TEAM MEMBERS</p>
+            <h2 className="mt-1 text-lg text-foreground">
+              {workspace.team.name}
+            </h2>
           </div>
           <div>
             {workspace.members.map((member) => (
               <div
                 key={String(member.id)}
-                className="flex items-center border-b border-[#202633] p-4"
+                className="flex items-center border-b border-border p-4"
               >
-                <span className="grid size-9 place-items-center bg-[#262626] font-bold text-[#7C6CFF]">
+                <span className="grid size-9 place-items-center bg-muted font-bold text-foreground">
                   {String(member.name).slice(0, 2).toUpperCase()}
                 </span>
                 <span className="ml-3">
-                  <strong className="block text-xs text-white">
+                  <strong className="block text-xs text-foreground">
                     {String(member.name)}
                   </strong>
-                  <span className="text-xs text-[#8B95A7]">
+                  <span className="text-xs text-muted-foreground">
                     {String(member.email)}
                   </span>
                 </span>
-                <span className="ml-auto border border-[#353D4D] px-2 py-1 text-xs text-[#c0c0c0]">
+                <span className="ml-auto border border-border px-2 py-1 text-xs text-foreground">
                   {String(member.role).toUpperCase()}
                 </span>
               </div>
             ))}
           </div>
-        </article>
-        <article className="border border-[#232936] bg-[#11151D] p-5">
-          <p className="text-xs text-[#7C6CFF]">INVITE COLLABORATOR</p>
-          <p className="mt-2 text-xs leading-relaxed text-[#8B95A7]">
+        </Card>
+        <Card className="block py-0 border border-border bg-background p-5">
+          <p className="text-xs text-foreground">INVITE COLLABORATOR</p>
+          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
             Create a tracked team invitation. Delivery is ready for an email
             provider secret.
           </p>
@@ -1877,52 +1699,54 @@ function OperationsConsole({
             }}
             className="mt-5 flex"
           >
-            <input
+            <Input
               value={inviteEmail}
               onChange={(event) => setInviteEmail(event.target.value)}
               type="email"
               required
               placeholder="engineer@company.com"
-              className="min-w-0 flex-1 border border-[#2D3442] bg-[#0D1017] px-3 text-xs text-white outline-none focus:border-[#7C6CFF]"
+              className="min-w-0 flex-1 border border-border bg-muted px-3 text-xs text-foreground outline-none focus:border-foreground"
             />
-            <button
+            <Button
+              variant="default"
+              type="submit"
               disabled={busy}
-              className="bg-[#7C6CFF] px-4 py-3 text-xs font-bold text-black"
+              className="bg-primary px-4 py-3 text-xs font-bold text-primary-foreground"
             >
               INVITE
-            </button>
+            </Button>
           </form>
           <div className="mt-5">
-            <p className="text-xs text-[#8B95A7]">PENDING INVITES</p>
+            <p className="text-xs text-muted-foreground">PENDING INVITES</p>
             {workspace.invites.map((invite) => (
               <div
                 key={String(invite.id)}
-                className="mt-2 flex border border-[#232936] p-3 text-xs"
+                className="mt-2 flex border border-border p-3 text-xs"
               >
-                <span className="text-white">{String(invite.email)}</span>
-                <span className="ml-auto text-[#FF9F43]">
+                <span className="text-foreground">{String(invite.email)}</span>
+                <span className="ml-auto text-warning">
                   {String(invite.status)}
                 </span>
               </div>
             ))}
           </div>
-        </article>
+        </Card>
       </section>
     );
 
   if (view === 'integrations')
     return (
       <section>
-        <div className="mb-4 border border-[#232936] bg-[#11151D] p-4">
-          <p className="text-xs text-[#7C6CFF]">
+        <Card className="block py-0 mb-4 border border-border bg-background p-4">
+          <p className="text-xs text-foreground">
             INGEST + INVESTIGATE + NOTIFY
           </p>
-          <p className="mt-1 text-xs text-[#8B95A7]">
+          <p className="mt-1 text-xs text-muted-foreground">
             Configure the integration record here, then add its secret in the
             deployment environment. Secrets are never collected in this browser.
           </p>
-        </div>
-        <div className="grid gap-px bg-[#232936] border border-[#232936] md:grid-cols-2 xl:grid-cols-3">
+        </Card>
+        <div className="grid gap-px bg-muted border border-border md:grid-cols-2 xl:grid-cols-3">
           {connectorTypes.map(([type, name, description]) => {
             const connector = workspace.connectors.find(
               (item) => item.type === type,
@@ -1938,11 +1762,11 @@ function OperationsConsole({
                       ? workspace.capabilities.externalIngestion
                       : false;
             return (
-              <article key={type} className="bg-[#11151D] p-5">
+              <article key={type} className="bg-background p-5">
                 <div className="flex items-start justify-between">
-                  <Plug size={18} className="text-[#9D91FF]" />
+                  <Plug size={18} className="text-foreground" />
                   <span
-                    className={`text-xs ${configured ? 'text-[#7C6CFF]' : connector ? 'text-[#FF9F43]' : 'text-[#8B95A7]'}`}
+                    className={`text-xs ${configured ? 'text-foreground' : connector ? 'text-warning' : 'text-muted-foreground'}`}
                   >
                     {configured
                       ? 'ACTIVE'
@@ -1951,13 +1775,15 @@ function OperationsConsole({
                         : 'NOT SET'}
                   </span>
                 </div>
-                <h3 className="mt-4 text-sm font-semibold text-white">
+                <h3 className="mt-4 text-sm font-semibold text-foreground">
                   {name}
                 </h3>
-                <p className="mt-1 min-h-8 text-xs leading-relaxed text-[#8B95A7]">
+                <p className="mt-1 min-h-8 text-xs leading-relaxed text-muted-foreground">
                   {description}
                 </p>
-                <button
+                <Button
+                  variant="ghost"
+                  type="button"
                   disabled={busy}
                   onClick={async () => {
                     if (type === 'slack' && configured) {
@@ -1988,7 +1814,7 @@ function OperationsConsole({
                     }
                     await action({ action: 'connector', type, name });
                   }}
-                  className="mt-4 w-full border border-[#353D4D] py-2 text-xs font-bold text-[#D9DEEA] hover:border-[#7C6CFF] hover:text-[#7C6CFF] disabled:opacity-50"
+                  className="mt-4 w-full border border-border py-2 text-xs font-bold text-foreground hover:border-foreground hover:text-foreground disabled:opacity-50"
                 >
                   {(type === 'slack' || type === 'email') && configured
                     ? 'SEND TEST ALERT'
@@ -1997,15 +1823,15 @@ function OperationsConsole({
                       : connector
                         ? 'UPDATE CONFIGURATION'
                         : 'PREPARE CONNECTOR'}
-                </button>
+                </Button>
               </article>
             );
           })}
         </div>
         {aiResult && (
-          <div className="mt-4 border border-[#9D91FF] bg-[#0D1017] p-4">
-            <p className="text-xs text-[#9D91FF]">OPENAI ROOT-CAUSE RESULT</p>
-            <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-[#D9DEEA]">
+          <div className="mt-4 border border-foreground bg-muted p-4">
+            <p className="text-xs text-foreground">OPENAI ROOT-CAUSE RESULT</p>
+            <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-foreground">
               {aiResult}
             </p>
           </div>
@@ -2017,9 +1843,9 @@ function OperationsConsole({
     <div className="space-y-6">
       <UptimePanel />
       <section className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-        <article className="border border-[#232936] bg-[#11151D] p-5">
-          <p className="text-xs text-[#7C6CFF]">PLATFORM HEALTH</p>
-          <div className="mt-5 grid grid-cols-2 gap-px bg-[#232936] border border-[#232936]">
+        <Card className="block py-0 border border-border bg-background p-5">
+          <p className="text-xs text-foreground">PLATFORM HEALTH</p>
+          <div className="mt-5 grid grid-cols-2 gap-px bg-muted border border-border">
             {[
               ['API', health?.status === 'healthy'],
               ['DATABASE', workspace.capabilities.database],
@@ -2033,52 +1859,52 @@ function OperationsConsole({
             ].map(([label, ready]) => (
               <div
                 key={String(label)}
-                className="flex items-center bg-[#171C26] p-3"
+                className="flex items-center bg-muted p-3"
               >
                 <span
-                  className={`mr-2 size-2 ${ready ? 'bg-[#7C6CFF]' : 'bg-[#FF9F43]'}`}
+                  className={`mr-2 size-2 ${ready ? 'bg-primary' : 'bg-warning/10'}`}
                 />
-                <span className="text-xs text-[#c0c0c0]">{String(label)}</span>
-                <span className="ml-auto text-xs text-[#8B95A7]">
+                <span className="text-xs text-foreground">{String(label)}</span>
+                <span className="ml-auto text-xs text-muted-foreground">
                   {ready ? 'READY' : 'NEEDS SECRET'}
                 </span>
               </div>
             ))}
           </div>
-          <p className="mt-4 text-xs text-[#8B95A7]">
+          <p className="mt-4 text-xs text-muted-foreground">
             HEALTH LATENCY: {health?.latencyMs ?? '—'} MS · AUTO REFRESH: 15 SEC
           </p>
-        </article>
-        <article className="border border-[#232936] bg-[#11151D]">
-          <div className="border-b border-[#232936] p-5">
-            <p className="text-xs text-[#7C6CFF]">SECURITY AUDIT TRAIL</p>
+        </Card>
+        <Card className="block py-0 border border-border bg-background">
+          <div className="border-b border-border p-5">
+            <p className="text-xs text-foreground">SECURITY AUDIT TRAIL</p>
           </div>
           <div className="max-h-[430px] overflow-auto">
             {workspace.auditEvents.map((event, index) => (
               <div
                 key={`${event.target_id}-${index}`}
-                className="border-b border-[#202633] p-4"
+                className="border-b border-border p-4"
               >
                 <div className="flex">
-                  <span className="text-xs text-[#9D91FF]">
+                  <span className="text-xs text-foreground">
                     {String(event.action).toUpperCase()}
                   </span>
-                  <span className="ml-auto text-xs text-[#626C7D]">
+                  <span className="ml-auto text-xs text-muted-foreground">
                     {dateTime(String(event.created_at))}
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-[#8B95A7]">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {String(event.target_type)} / {String(event.target_id)}
                 </p>
               </div>
             ))}
             {!workspace.auditEvents.length && (
-              <p className="p-10 text-center text-xs text-[#8B95A7]">
+              <p className="p-10 text-center text-xs text-muted-foreground">
                 Audit events appear after uploads and team actions.
               </p>
             )}
           </div>
-        </article>
+        </Card>
       </section>
     </div>
   );

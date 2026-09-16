@@ -1,4 +1,16 @@
 'use client';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from '@/components/ui/table';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Check, RefreshCw, Search, Shield, UserRound } from 'lucide-react';
@@ -74,45 +86,47 @@ export default function AdminClientsPanel() {
 
   if (loading && !data) {
     return (
-      <section className="border border-[#232936] bg-[#11151D] p-8 text-sm text-[#8B95A7]">
+      <Card className="block py-0 border border-border bg-background p-8 text-sm text-muted-foreground">
         Loading client accounts…
-      </section>
+      </Card>
     );
   }
 
   if (error && !data) {
     return (
-      <section className="border border-[#a53d3d] bg-[#200d0f] p-5 text-sm text-[#FF6B79]">
+      <section className="border border-destructive bg-destructive/10 p-5 text-sm text-destructive">
         {error}
       </section>
     );
   }
 
   return (
-    <section className="border border-[#232936] bg-[#11151D]">
-      <header className="border-b border-[#232936] p-5 lg:p-6">
+    <Card className="block py-0 border border-border bg-background">
+      <header className="border-b border-border p-5 lg:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-sm text-[#8B95A7]">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Shield size={16} /> Platform administration
             </div>
-            <h2 className="mt-2 text-2xl font-semibold text-white">
+            <h2 className="mt-2 text-2xl font-semibold text-foreground">
               Client accounts
             </h2>
-            <p className="mt-1 text-sm text-[#8B95A7]">
+            <p className="mt-1 text-sm text-muted-foreground">
               Registered CrashLens accounts and their database activity.
             </p>
           </div>
-          <button
-            className="flex h-10 items-center gap-2 border border-[#353D4D] px-4 text-sm text-[#D9DEEA] hover:border-white"
+          <Button
+            variant="ghost"
+            type="button"
+            className="flex h-10 items-center gap-2 border border-border px-4 text-sm text-foreground hover:border-foreground"
             onClick={() => void load()}
             disabled={loading}
           >
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
             Refresh
-          </button>
+          </Button>
         </div>
-        <div className="mt-6 grid gap-px border border-[#232936] bg-[#232936] sm:grid-cols-3">
+        <div className="mt-6 grid gap-px border border-border bg-muted sm:grid-cols-3">
           <Summary label="Total accounts" value={data?.totals.total ?? 0} />
           <Summary label="Verified emails" value={data?.totals.verified ?? 0} />
           <Summary
@@ -122,56 +136,56 @@ export default function AdminClientsPanel() {
         </div>
       </header>
 
-      <div className="border-b border-[#232936] p-4">
-        <label className="flex max-w-md items-center gap-3 border border-[#353D4D] bg-[#0D1017] px-3 focus-within:border-white">
-          <Search size={16} className="text-[#8B95A7]" />
-          <input
+      <div className="border-b border-border p-4">
+        <Label className="flex max-w-md items-center gap-3 border border-border bg-muted px-3 focus-within:border-white">
+          <Search size={16} className="text-muted-foreground" />
+          <Input
             aria-label="Search client accounts"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            className="h-11 min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-[#626C7D]"
+            className="h-11 min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
             placeholder="Search name, email, or workspace"
           />
-        </label>
+        </Label>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[980px] text-left text-sm">
-          <thead className="border-b border-[#232936] bg-[#0D1017] text-xs text-[#8B95A7]">
-            <tr>
-              <th className="px-4 py-3 font-medium">Client</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Workspace</th>
-              <th className="px-4 py-3 font-medium">Activity</th>
-              <th className="px-4 py-3 font-medium">Created</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table className="w-full min-w-[980px] text-left text-sm">
+          <TableHeader className="border-b border-border bg-muted text-xs text-muted-foreground">
+            <TableRow>
+              <TableHead className="px-4 py-3 font-medium">Client</TableHead>
+              <TableHead className="px-4 py-3 font-medium">Status</TableHead>
+              <TableHead className="px-4 py-3 font-medium">Workspace</TableHead>
+              <TableHead className="px-4 py-3 font-medium">Activity</TableHead>
+              <TableHead className="px-4 py-3 font-medium">Created</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {clients.map((client) => (
-              <tr
+              <TableRow
                 key={client.id}
-                className="border-b border-[#202633] hover:bg-[#191919]"
+                className="border-b border-border hover:bg-muted"
               >
-                <td
+                <TableCell
                   className="px-4 py-4"
                   aria-label={`Client ${client.name || client.email}`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="grid size-9 shrink-0 place-items-center border border-[#353D4D] bg-[#171C26] text-xs font-semibold text-white">
+                    <span className="grid size-9 shrink-0 place-items-center border border-border bg-muted text-xs font-semibold text-foreground">
                       {(client.name || client.email).slice(0, 2).toUpperCase()}
                     </span>
                     <span>
-                      <strong className="block font-medium text-white">
+                      <strong className="block font-medium text-foreground">
                         {client.name}
                       </strong>
-                      <span className="mt-0.5 block text-xs text-[#8B95A7]">
+                      <span className="mt-0.5 block text-xs text-muted-foreground">
                         {client.email}
                       </span>
                     </span>
                   </div>
-                </td>
-                <td className="px-4 py-4">
-                  <span className="inline-flex items-center gap-1.5 border border-[#353D4D] px-2 py-1 text-xs text-[#D9DEEA]">
+                </TableCell>
+                <TableCell className="px-4 py-4">
+                  <span className="inline-flex items-center gap-1.5 border border-border px-2 py-1 text-xs text-foreground">
                     {client.verified ? (
                       <Check size={12} />
                     ) : (
@@ -179,46 +193,46 @@ export default function AdminClientsPanel() {
                     )}
                     {client.verified ? 'Email verified' : 'Unverified'}
                   </span>
-                  <span className="mt-2 block text-xs text-[#8B95A7]">
+                  <span className="mt-2 block text-xs text-muted-foreground">
                     {Number(client.active_sessions)} active session
                     {Number(client.active_sessions) === 1 ? '' : 's'}
                   </span>
-                </td>
-                <td className="px-4 py-4 text-[#D9DEEA]">
+                </TableCell>
+                <TableCell className="px-4 py-4 text-foreground">
                   {client.workspace_name ?? 'Workspace not created'}
-                </td>
-                <td className="px-4 py-4 text-[#D9DEEA]">
+                </TableCell>
+                <TableCell className="px-4 py-4 text-foreground">
                   <span className="block">
                     {Number(client.incident_count)} incidents
                   </span>
-                  <span className="mt-1 block text-xs text-[#8B95A7]">
+                  <span className="mt-1 block text-xs text-muted-foreground">
                     {Number(client.ingestion_count)} log uploads
                   </span>
-                </td>
-                <td className="px-4 py-4 text-[#D9DEEA]">
+                </TableCell>
+                <TableCell className="px-4 py-4 text-foreground">
                   <time dateTime={asUtc(client.created_at).toISOString()}>
                     {createdDate(client.created_at)}
                   </time>
-                  <span className="mt-1 block text-xs text-[#8B95A7]">
+                  <span className="mt-1 block text-xs text-muted-foreground">
                     {asUtc(client.created_at)
                       .toISOString()
                       .replace('T', ' ')
                       .replace('.000Z', ' UTC')}
                   </span>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
         {!clients.length && (
-          <p className="p-10 text-center text-sm text-[#8B95A7]">
+          <p className="p-10 text-center text-sm text-muted-foreground">
             {query
               ? 'No accounts match this search.'
               : 'No client accounts have been created.'}
           </p>
         )}
       </div>
-      <footer className="flex flex-wrap justify-between gap-2 p-4 text-xs text-[#626C7D]">
+      <footer className="flex flex-wrap justify-between gap-2 p-4 text-xs text-muted-foreground">
         <span>
           Showing {clients.length} of {data?.totals.total ?? 0} accounts
         </span>
@@ -226,15 +240,15 @@ export default function AdminClientsPanel() {
           <span>Updated {new Date(data.generatedAt).toLocaleString()}</span>
         )}
       </footer>
-    </section>
+    </Card>
   );
 }
 
 function Summary({ label, value }: { label: string; value: number }) {
   return (
-    <div className="bg-[#11151D] p-4">
-      <p className="text-xs text-[#8B95A7]">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-white">{value}</p>
+    <div className="bg-background p-4">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-2xl font-semibold text-foreground">{value}</p>
     </div>
   );
 }
