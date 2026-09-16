@@ -137,7 +137,7 @@ export default function AdminClientsPanel() {
       </header>
 
       <div className="border-b border-border p-4">
-        <Label className="flex max-w-md items-center gap-3 border border-border bg-muted px-3 focus-within:border-white">
+        <Label className="flex max-w-md items-center gap-3 border border-border bg-muted px-3 focus-within:border-foreground">
           <Search size={16} className="text-muted-foreground" />
           <Input
             aria-label="Search client accounts"

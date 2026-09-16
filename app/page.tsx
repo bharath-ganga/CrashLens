@@ -492,7 +492,7 @@ export default function Home() {
                   All events
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="size-2 rounded-full bg-destructive/10" />
+                  <span className="size-2 rounded-full bg-destructive" />
                   Critical
                 </span>
               </div>
@@ -615,7 +615,7 @@ export default function Home() {
                       <span className="min-w-0">
                         <span className="flex items-center gap-2">
                           <span
-                            className={`size-2 shrink-0 rounded-full ${incident.severity === 'critical' ? 'bg-destructive/10' : incident.severity === 'warning' ? 'bg-warning/10' : 'bg-warning/10'}`}
+                            className={`size-2 shrink-0 rounded-full ${incident.severity === 'critical' ? 'bg-destructive' : 'bg-warning'}`}
                           />
                           <span className="truncate text-[13px] font-medium text-foreground">
                             {incident.title}
@@ -663,7 +663,7 @@ export default function Home() {
                     <div>
                       <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
                         <span
-                          className={`size-1.5 ${selected.severity === 'critical' ? 'bg-destructive/10' : 'bg-warning/10'}`}
+                          className={`size-1.5 ${selected.severity === 'critical' ? 'bg-destructive' : 'bg-warning'}`}
                         />
                         INCIDENT #{selected.id} /{' '}
                         {resolved.includes(selected.id)
@@ -937,7 +937,7 @@ export default function Home() {
                           </span>
                           <span className="relative flex justify-center">
                             <span
-                              className={`relative z-10 mt-0.5 size-2.5 border border-border ${event.type === 'critical' ? 'bg-destructive/10' : event.type === 'deploy' ? 'bg-primary' : event.type === 'alert' ? 'bg-warning/10' : 'bg-muted'}`}
+                              className={`relative z-10 mt-0.5 size-2.5 border border-border ${event.type === 'critical' ? 'bg-destructive' : event.type === 'deploy' ? 'bg-primary' : event.type === 'alert' ? 'bg-warning' : 'bg-muted'}`}
                             />
                             {index < selected.timeline.length - 1 && (
                               <span className="absolute top-2 h-full w-px bg-muted" />
@@ -1207,7 +1207,7 @@ function LocalDataConsole({
                 className="flex w-full items-center gap-3 p-4 text-left hover:bg-muted"
               >
                 <span
-                  className={`size-2 rounded-full ${incident.severity === 'critical' ? 'bg-destructive/10' : 'bg-warning/10'}`}
+                  className={`size-2 rounded-full ${incident.severity === 'critical' ? 'bg-destructive' : 'bg-warning'}`}
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm">
@@ -1239,7 +1239,7 @@ function LocalDataConsole({
             variant="default"
             type="button"
             onClick={onUpload}
-            className="rounded-none bg-primary px-4 py-2 text-xs font-semibold"
+            className="rounded-none bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
           >
             Upload logs
           </Button>
@@ -1382,7 +1382,7 @@ function LocalDataConsole({
       <div className="flex gap-3 border-t border-border p-5">
         <Link
           href="/account"
-          className="rounded-none bg-primary px-4 py-2 text-xs font-semibold"
+          className="rounded-none bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/80"
         >
           Manage account
         </Link>
@@ -1862,7 +1862,7 @@ function OperationsConsole({
                 className="flex items-center bg-muted p-3"
               >
                 <span
-                  className={`mr-2 size-2 ${ready ? 'bg-primary' : 'bg-warning/10'}`}
+                  className={`mr-2 size-2 ${ready ? 'bg-primary' : 'bg-warning'}`}
                 />
                 <span className="text-xs text-foreground">{String(label)}</span>
                 <span className="ml-auto text-xs text-muted-foreground">

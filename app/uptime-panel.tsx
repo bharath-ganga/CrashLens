@@ -741,7 +741,7 @@ export default function UptimePanel() {
               <div
                 key={d.date}
                 title={`${d.date}: ${d.state}`}
-                className={`min-w-1 flex-1 ${d.state === 'up' ? 'bg-primary' : d.state === 'down' ? 'bg-destructive/10' : 'bg-muted'}`}
+                className={`min-w-1 flex-1 ${d.state === 'up' ? 'bg-primary' : d.state === 'down' ? 'bg-destructive' : 'bg-muted'}`}
                 style={{ height: d.state === 'none' ? '25%' : '100%' }}
               />
             ))}
