@@ -778,18 +778,25 @@ export default function UptimePanel() {
             <ChartContainer
               className="h-full w-full aspect-auto"
               config={{
-                latency: { label: 'Response time (ms)', color: '#262626' },
+                latency: {
+                  label: 'Response time (ms)',
+                  color: 'var(--chart-primary)',
+                },
               }}
             >
               <LineChart data={chart}>
-                <CartesianGrid stroke="#e5e5e5" vertical={false} />
-                <XAxis dataKey="time" stroke="#737373" fontSize={11} />
-                <YAxis stroke="#737373" fontSize={11} />
+                <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
+                <XAxis
+                  dataKey="time"
+                  stroke="var(--chart-axis)"
+                  fontSize={11}
+                />
+                <YAxis stroke="var(--chart-axis)" fontSize={11} />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Line
                   type="monotone"
                   dataKey="latency"
-                  stroke="#262626"
+                  stroke="var(--chart-primary)"
                   dot={false}
                 />
               </LineChart>

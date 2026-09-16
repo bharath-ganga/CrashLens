@@ -16,20 +16,20 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--muted);
   --color-accent-foreground: var(--foreground);
-  --color-destructive: #b42318;
-  --color-success: #166534;
-  --color-warning: #854d0e;
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --color-border: var(--border);
   --color-input: var(--border);
-  --color-ring: #525252;
-  --color-sidebar: #fafafa;
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--foreground);
   --color-sidebar-primary: var(--primary);
   --color-sidebar-primary-foreground: var(--primary-foreground);
-  --color-sidebar-accent: #e4e4e7;
-  --color-sidebar-accent-foreground: #171717;
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--border);
-  --color-sidebar-ring: #525252;
+  --color-sidebar-ring: var(--ring);
   --radius-sm: 0;
   --radius-md: 0;
   --radius-lg: 0;
@@ -47,7 +47,40 @@
   --muted: #f4f4f5;
   --muted-foreground: #525252;
   --border: #d4d4d8;
+  --destructive: #b42318;
+  --success: #166534;
+  --warning: #854d0e;
+  --ring: #525252;
+  --sidebar: #fafafa;
+  --sidebar-accent: #e4e4e7;
+  --sidebar-accent-foreground: #171717;
+  --chart-grid: #d4d4d8;
+  --chart-axis: #525252;
+  --chart-primary: #262626;
+  --chart-primary-fill: #f4f4f5;
   --radius: 0;
+}
+.dark {
+  color-scheme: dark;
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #0f0f12;
+  --primary: #fafafa;
+  --primary-foreground: #18181b;
+  --muted: #18181b;
+  --muted-foreground: #a1a1aa;
+  --border: #3f3f46;
+  --destructive: #f87171;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --ring: #a1a1aa;
+  --sidebar: #0f0f12;
+  --sidebar-accent: #27272a;
+  --sidebar-accent-foreground: #fafafa;
+  --chart-grid: #3f3f46;
+  --chart-axis: #a1a1aa;
+  --chart-primary: #fafafa;
+  --chart-primary-fill: #18181b;
 }
 @layer base {
   * {
@@ -68,12 +101,12 @@
     cursor: pointer;
   }
   ::selection {
-    background: #d4d4d4;
-    color: #171717;
+    background: var(--border);
+    color: var(--foreground);
   }
   * {
     scrollbar-width: thin;
-    scrollbar-color: #d4d4d4 transparent;
+    scrollbar-color: var(--border) transparent;
   }
 }
 [data-slot='dialog-overlay'],

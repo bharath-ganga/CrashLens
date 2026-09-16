@@ -53,6 +53,7 @@ import AdminClientsPanel from './admin-clients-panel';
 import ProductionIntelligencePanel from './production-intelligence-panel';
 import Link from 'next/link';
 import { WorkspaceShell } from '@/components/workspace-shell';
+import { ThemeToggle } from '@/components/theme-toggle';
 import {
   Dialog,
   DialogContent,
@@ -511,8 +512,14 @@ export default function Home() {
                 <ChartContainer
                   className="h-full w-full aspect-auto"
                   config={{
-                    count: { label: 'All events', color: '#262626' },
-                    critical: { label: 'Critical', color: '#b42318' },
+                    count: {
+                      label: 'All events',
+                      color: 'var(--chart-primary)',
+                    },
+                    critical: {
+                      label: 'Critical',
+                      color: 'var(--destructive)',
+                    },
                   }}
                 >
                   <AreaChart
@@ -521,34 +528,34 @@ export default function Home() {
                   >
                     <CartesianGrid
                       vertical={false}
-                      stroke="#e5e5e5"
+                      stroke="var(--chart-grid)"
                       strokeDasharray="3 5"
                     />
                     <XAxis
                       dataKey="label"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: '#737373', fontSize: 11 }}
+                      tick={{ fill: 'var(--chart-axis)', fontSize: 11 }}
                       interval="preserveStartEnd"
                     />
                     <YAxis
                       allowDecimals={false}
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: '#737373', fontSize: 11 }}
+                      tick={{ fill: 'var(--chart-axis)', fontSize: 11 }}
                     />
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <Area
                       type="monotone"
                       dataKey="count"
                       name="All events"
-                      stroke="#262626"
+                      stroke="var(--chart-primary)"
                       strokeWidth={2.5}
-                      fill="#f5f5f5"
+                      fill="var(--chart-primary-fill)"
                       activeDot={{
                         r: 5,
-                        fill: '#525252',
-                        stroke: '#ffffff',
+                        fill: 'var(--chart-primary)',
+                        stroke: 'var(--background)',
                         strokeWidth: 2,
                       }}
                     />
@@ -556,10 +563,14 @@ export default function Home() {
                       type="monotone"
                       dataKey="critical"
                       name="Critical"
-                      stroke="#b42318"
+                      stroke="var(--destructive)"
                       strokeWidth={2}
                       fill="transparent"
-                      dot={{ r: 3, fill: '#b42318', strokeWidth: 0 }}
+                      dot={{
+                        r: 3,
+                        fill: 'var(--destructive)',
+                        strokeWidth: 0,
+                      }}
                     />
                   </AreaChart>
                 </ChartContainer>
@@ -1198,7 +1209,7 @@ function LocalDataConsole({
           <div className="border-b border-border p-5">
             <h2 className="font-semibold">Needs attention</h2>
           </div>
-          <div className="divide-y divide-[#e5e5e5]">
+          <div className="divide-y divide-border">
             {incidents.slice(0, 4).map((incident) => (
               <Button
                 variant="ghost"
@@ -1326,7 +1337,7 @@ function LocalDataConsole({
           </p>
         </div>
         {deployments.length ? (
-          <div className="divide-y divide-[#e5e5e5]">
+          <div className="divide-y divide-border">
             {deployments.map((deployment, index) => (
               <div
                 key={`${deployment.timestamp}-${index}`}
@@ -1378,6 +1389,12 @@ function LocalDataConsole({
             <p className="mt-2 text-sm text-foreground">{value}</p>
           </div>
         ))}
+      </div>
+      <div className="border-t border-border p-5">
+        <p className="mb-3 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+          Appearance
+        </p>
+        <ThemeToggle />
       </div>
       <div className="flex gap-3 border-t border-border p-5">
         <Link
