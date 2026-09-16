@@ -43,7 +43,7 @@ Log files / API logs / OpenTelemetry / uptime checks / deployments
                               │
                  ┌────────────┴────────────┐
                  ▼                         ▼
-        Cloudflare D1                Cloudflare R2
+             Turso                   Cloudflare R2
    normalized events, incidents    redacted source files
                  └────────────┬────────────┘
                               ▼
@@ -59,7 +59,7 @@ CrashLens treats correlations as investigation evidence—not proof of a root ca
 - Upload `.txt`, `.log`, `.csv`, `.jsonl`, or `.ndjson` files up to 50 MB.
 - Parse files on the server and normalize timestamps, severity levels, service names, and messages.
 - Redact common credentials and sensitive values before storing anything.
-- Persist normalized log entries and generated incidents in D1, and retain the redacted source file in R2.
+- Persist normalized log entries and generated incidents in Turso, and retain the redacted source file in R2.
 - Reload previous investigations from the authenticated workspace instead of relying on browser memory.
 - Group repeated errors using stable fingerprints.
 - Build a chronological timeline for each incident.
@@ -103,7 +103,7 @@ CrashLens treats correlations as investigation evidence—not proof of a root ca
 | Charts | Recharts | Incident activity, uptime, latency, and reliability visualization |
 | Framework and build | vinext, Vite | React application routing, server rendering, API routes, and production bundles |
 | Runtime | Cloudflare Workers with Node.js compatibility | Server-side authentication, ingestion, analysis, monitoring, and APIs |
-| Relational storage | Cloudflare D1 / SQLite | Accounts, teams, logs, incidents, traces, deployments, monitors, notes, and audit history |
+| Relational storage | Turso | Accounts, teams, logs, incidents, traces, deployments, monitors, notes, and audit history |
 | Object storage | Cloudflare R2 | Private storage for redacted uploaded source files |
 | Authentication | CrashLens accounts, PBKDF2 password hashing, HTTP-only sessions | Account registration, sign-in, password recovery, and protected workspaces |
 | Email and alerts | Resend, Slack, PagerDuty, signed webhooks | Security emails and incident lifecycle notifications |
@@ -124,14 +124,14 @@ CrashLens/
 │   ├── api/monitors/          Uptime monitor configuration and results
 │   └── api/monitor-tick/      Scheduled monitor execution endpoint
 ├── components/                Application shell and reusable UI components
-├── db/                        D1 queries for auth, logs, incidents, monitors, and teams
-├── drizzle/                   Immutable D1 schema migrations
+├── db/                        Turso adapter and queries for application data
+├── drizzle/                   Immutable SQLite schema migrations
 ├── lib/                       Parsers, analyzers, redaction, security, and uptime logic
 ├── scripts/                   Migration, deployment, monitoring, and integration scripts
 ├── tests/                     Node-based unit and security tests
 ├── public/                    Static assets and social preview image
 ├── .openai/hosting.json       OpenAI Sites project configuration
-├── wrangler.production.jsonc  Cloudflare Worker, D1, and R2 bindings
+├── wrangler.production.jsonc  Cloudflare Worker and R2 configuration
 └── package.json               Commands and dependencies
 ```
 
@@ -140,9 +140,9 @@ CrashLens/
 | Data | Storage | Notes |
 | --- | --- | --- |
 | Uploaded source file | R2 | Stored privately after secrets and sensitive fields are redacted |
-| Normalized log events | D1 | Parsed server-side and linked to an ingestion run and workspace |
-| Incidents and evidence | D1 | Fingerprints, timelines, related logs, severity, assignments, and status |
-| Operational data | D1 | Accounts, teams, comments, monitors, telemetry, deployments, SLOs, and postmortems |
+| Normalized log events | Turso | Parsed server-side and linked to an ingestion run and workspace |
+| Incidents and evidence | Turso | Fingerprints, timelines, related logs, severity, assignments, and status |
+| Operational data | Turso | Accounts, teams, comments, monitors, telemetry, deployments, SLOs, and postmortems |
 
 ## Local setup
 
@@ -162,10 +162,10 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-After the first development start creates the local D1 emulator, apply the SQL migrations:
+Configure `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` in `.dev.vars`, then apply the SQL migrations:
 
 ```bash
-node scripts/migrate-local.mjs
+npm run migrate:turso
 ```
 
 Restart the development server after changing `.dev.vars`.
@@ -175,7 +175,7 @@ Restart the development server after changing `.dev.vars`.
 The production Worker uses these resources:
 
 - Worker: `crashlens-production`
-- D1 database: `crashlens-production-db` with binding `DB`
+- Turso database: `crashlens-production-db`
 - Private R2 bucket: `crashlens-production-files` with binding `FILES`
 - Live application: [crashlens-production.bharathganga7.workers.dev](https://crashlens-production.bharathganga7.workers.dev/)
 
@@ -183,7 +183,7 @@ Authenticate Wrangler, apply the committed migrations, and deploy:
 
 ```bash
 npx wrangler login
-npm run migrate:cloudflare
+npm run migrate:turso
 npm run deploy:cloudflare
 ```
 
@@ -203,6 +203,8 @@ Important server-only variables:
 
 | Variable                | Purpose                                                       |
 | ----------------------- | ------------------------------------------------------------- |
+| `TURSO_DATABASE_URL`    | Remote `turso://` database URL                                |
+| `TURSO_AUTH_TOKEN`      | Server-only database authentication token                     |
 | `RESEND_API_KEY`        | Sends security, password-reset, and incident emails           |
 | `EMAIL_FROM`            | Verified sender, for example `CrashLens <alerts@example.com>` |
 | `APP_ORIGIN`            | Exact application origin used in account links                |
@@ -226,7 +228,7 @@ Never commit `.dev.vars`, API keys, database URLs, or webhook secrets.
 2. Upload a log export from your application or observability provider.
 3. Wait while the Worker parses, redacts, fingerprints, and persists the file server-side.
 4. Open a generated incident and review its timeline, related logs, evidence, and possible trigger.
-5. Refresh or sign in again to confirm the investigation is still available from D1 and R2.
+5. Refresh or sign in again to confirm the investigation is still available from Turso and R2.
 
 ### Test production intelligence
 
@@ -333,7 +335,7 @@ The Sites deployment is currently owner-private. That access gate is separate fr
 - Passwords use salted PBKDF2-SHA256 with 100,000 iterations.
 - Sessions use random tokens and HTTP-only, SameSite cookies; production cookies are Secure.
 - Authentication endpoints are rate limited.
-- Uploaded content is redacted before D1/R2 persistence.
+- Uploaded content is redacted before Turso/R2 persistence.
 - Monitor targets are HTTPS-only.
 - Credentials, query strings, redirects, private IP literals, and private DNS answers are rejected for monitors.
 - Sensitive request headers and oversized responses are blocked.
@@ -354,7 +356,7 @@ Committed migrations live in [`drizzle`](./drizzle):
 - `0006_remove_demo_data.sql` — removes legacy seeded demonstration records
 - `0007_persistent_server_ingestion.sql` — persists ingestion runs and normalized server-parsed logs
 
-Sites applies committed migrations during publishing. For local development, use `node scripts/migrate-local.mjs` after the local emulator has been created.
+Run `npm run migrate:turso` after configuring Turso credentials. The migrations are idempotent; application routes perform a lightweight connectivity check before database work.
 
 ## Verification
 
@@ -364,14 +366,6 @@ npm run lint
 npx tsc --noEmit
 npm run build
 ```
-
-For authenticated local integration checks, start the development server, apply migrations, and run:
-
-```bash
-node --experimental-strip-types scripts/test-local.mjs
-```
-
-The integration script creates disposable local fixtures and removes only those fixtures. It does not send real emails.
 
 ## Current limitations
 
@@ -383,7 +377,7 @@ The integration script creates disposable local fixtures and removes only those 
 
 ## Resume summary
 
-> Built CrashLens, a full-stack production observability platform using React, TypeScript, Cloudflare Workers, D1, R2, and Resend. Implemented server-side log ingestion and persistence, secure authentication, incident clustering, distributed tracing, deployment correlation, SLO/error-budget tracking, uptime monitoring, multi-channel alerts, team collaboration, and automated postmortem generation.
+> Built CrashLens, a full-stack production observability platform using React, TypeScript, Cloudflare Workers, Turso, R2, and Resend. Implemented server-side log ingestion and persistence, secure authentication, incident clustering, distributed tracing, deployment correlation, SLO/error-budget tracking, uptime monitoring, multi-channel alerts, team collaboration, and automated postmortem generation.
 
 ## License
 
