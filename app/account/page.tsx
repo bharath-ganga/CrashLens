@@ -63,6 +63,7 @@ export default function AccountPage() {
     try {
       const response = await fetch('/api/account', {
         method: 'POST',
+        signal: AbortSignal.timeout(20000),
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: mode,
@@ -84,7 +85,13 @@ export default function AccountPage() {
       if (mode === 'signup') setMode('login');
       setMessage(data.message);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Request failed');
+      setError(
+        e instanceof DOMException && e.name === 'TimeoutError'
+          ? 'The request took too long. Please try again.'
+          : e instanceof Error
+            ? e.message
+            : 'Request failed',
+      );
     } finally {
       setBusy(false);
     }

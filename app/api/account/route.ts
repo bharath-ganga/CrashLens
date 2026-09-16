@@ -60,10 +60,10 @@ export async function GET(request: Request) {
 }
 export async function POST(request: Request) {
   const env = getRuntimeEnv();
-  await ensureDatabase(env.DB);
   if (request.headers.get('origin') !== new URL(request.url).origin)
     return json({ error: 'Invalid origin' }, 403);
   try {
+    await ensureDatabase(env.DB);
     const text = await request.text();
     if (text.length > 4096) return json({ error: 'Request too large' }, 413);
     const body = JSON.parse(text);
@@ -266,7 +266,11 @@ export async function POST(request: Request) {
     );
     await flushEmails(env);
     return json({ message: generic });
-  } catch {
+  } catch (error) {
+    console.error(
+      'Account request failed:',
+      error instanceof Error ? error.message : 'Unknown error',
+    );
     return json(
       {
         error:

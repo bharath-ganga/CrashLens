@@ -39,10 +39,13 @@ export function isPlatformAdmin(
 let schemaReady: Promise<void> | null = null;
 
 export async function ensureDatabase(db: D1Database): Promise<void> {
-  schemaReady ??= (async () => {
-    for (const statement of schemaStatements) await db.prepare(statement).run();
-    await db.prepare('PRAGMA optimize').run();
-  })();
+  schemaReady ??= db
+    .batch(schemaStatements.map((statement) => db.prepare(statement)))
+    .then(() => undefined)
+    .catch((error) => {
+      schemaReady = null;
+      throw error;
+    });
   await schemaReady;
 }
 
