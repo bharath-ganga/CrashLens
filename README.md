@@ -11,10 +11,10 @@ CrashLens collects application logs and telemetry, removes common sensitive valu
 
 ## Live deployments
 
-| Environment | URL | Access |
-| --- | --- | --- |
+| Environment           | URL                                                                                                       | Access                                                                 |
+| --------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | Cloudflare production | [crashlens-production.bharathganga7.workers.dev](https://crashlens-production.bharathganga7.workers.dev/) | Public application; a CrashLens account is required for workspace data |
-| OpenAI Sites preview | [crashlens.bharathganga7.chatgpt.site](https://crashlens.bharathganga7.chatgpt.site/) | Owner-private preview deployment |
+| OpenAI Sites preview  | [crashlens.bharathganga7.chatgpt.site](https://crashlens.bharathganga7.chatgpt.site/)                     | Owner-private preview deployment                                       |
 
 The Cloudflare deployment is the primary live application. The Sites deployment is kept private for owner testing.
 
@@ -97,19 +97,19 @@ CrashLens treats correlations as investigation evidence—not proof of a root ca
 
 ## Technology stack
 
-| Layer | Technology | Purpose |
-| --- | --- | --- |
-| UI | React 19, TypeScript, Tailwind CSS v4, shadcn-style components, Base UI, Lucide | Responsive dashboard, forms, navigation, themes, and accessible controls |
-| Charts | Recharts | Incident activity, uptime, latency, and reliability visualization |
-| Framework and build | vinext, Vite | React application routing, server rendering, API routes, and production bundles |
-| Runtime | Cloudflare Workers with Node.js compatibility | Server-side authentication, ingestion, analysis, monitoring, and APIs |
-| Relational storage | Turso | Accounts, teams, logs, incidents, traces, deployments, monitors, notes, and audit history |
-| Object storage | Cloudflare R2 | Private storage for redacted uploaded source files |
-| Authentication | CrashLens accounts, PBKDF2 password hashing, HTTP-only sessions | Account registration, sign-in, password recovery, and protected workspaces |
-| Email and alerts | Resend, Slack, PagerDuty, signed webhooks | Security emails and incident lifecycle notifications |
-| Intelligence | Deterministic parsing and correlation with optional OpenAI assistance | Fingerprinting, anomaly detection, deployment correlation, and investigation summaries |
-| Hosting | Cloudflare Workers and OpenAI Sites | Production deployment and owner-private preview |
-| Quality | Node test runner, TypeScript, oxlint, oxfmt | Automated tests, type safety, linting, and formatting |
+| Layer               | Technology                                                                      | Purpose                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| UI                  | React 19, TypeScript, Tailwind CSS v4, shadcn-style components, Base UI, Lucide | Responsive dashboard, forms, navigation, themes, and accessible controls                  |
+| Charts              | Recharts                                                                        | Incident activity, uptime, latency, and reliability visualization                         |
+| Framework and build | vinext, Vite                                                                    | React application routing, server rendering, API routes, and production bundles           |
+| Runtime             | Cloudflare Workers with Node.js compatibility                                   | Server-side authentication, ingestion, analysis, monitoring, and APIs                     |
+| Relational storage  | Turso                                                                           | Accounts, teams, logs, incidents, traces, deployments, monitors, notes, and audit history |
+| Object storage      | Cloudflare R2                                                                   | Private storage for redacted uploaded source files                                        |
+| Authentication      | CrashLens accounts, PBKDF2 password hashing, HTTP-only sessions                 | Account registration, sign-in, password recovery, and protected workspaces                |
+| Email and alerts    | Resend, Slack, PagerDuty, signed webhooks                                       | Security emails and incident lifecycle notifications                                      |
+| Intelligence        | Deterministic parsing and correlation with optional OpenAI assistance           | Fingerprinting, anomaly detection, deployment correlation, and investigation summaries    |
+| Hosting             | Cloudflare Workers and OpenAI Sites                                             | Production deployment and owner-private preview                                           |
+| Quality             | Node test runner, TypeScript, oxlint, oxfmt                                     | Automated tests, type safety, linting, and formatting                                     |
 
 ## Project structure
 
@@ -137,12 +137,12 @@ CrashLens/
 
 ### Persistence model
 
-| Data | Storage | Notes |
-| --- | --- | --- |
-| Uploaded source file | R2 | Stored privately after secrets and sensitive fields are redacted |
-| Normalized log events | Turso | Parsed server-side and linked to an ingestion run and workspace |
-| Incidents and evidence | Turso | Fingerprints, timelines, related logs, severity, assignments, and status |
-| Operational data | Turso | Accounts, teams, comments, monitors, telemetry, deployments, SLOs, and postmortems |
+| Data                   | Storage | Notes                                                                              |
+| ---------------------- | ------- | ---------------------------------------------------------------------------------- |
+| Uploaded source file   | R2      | Stored privately after secrets and sensitive fields are redacted                   |
+| Normalized log events  | Turso   | Parsed server-side and linked to an ingestion run and workspace                    |
+| Incidents and evidence | Turso   | Fingerprints, timelines, related logs, severity, assignments, and status           |
+| Operational data       | Turso   | Accounts, teams, comments, monitors, telemetry, deployments, SLOs, and postmortems |
 
 ## Local setup
 
@@ -201,22 +201,22 @@ Copy-Item .dev.vars.example .dev.vars
 
 Important server-only variables:
 
-| Variable                | Purpose                                                       |
-| ----------------------- | ------------------------------------------------------------- |
-| `TURSO_DATABASE_URL`    | Remote `turso://` database URL                                |
-| `TURSO_AUTH_TOKEN`      | Server-only database authentication token                     |
-| `RESEND_API_KEY`        | Sends security, password-reset, and incident emails           |
-| `EMAIL_FROM`            | Verified sender, for example `CrashLens <alerts@example.com>` |
-| `APP_ORIGIN`            | Exact application origin used in account links                |
-| `ADMIN_EMAILS`          | Comma-separated administrator email allowlist                 |
-| `INGESTION_TOKEN`       | Protects machine log, trace, and deployment ingestion         |
-| `INGESTION_TEAM_ID`     | Routes machine data into the correct team workspace           |
-| `MONITOR_CRON_TOKEN`    | Authenticates the external uptime runner                      |
-| `SLACK_WEBHOOK_URL`     | Optional Slack incident notifications                         |
-| `PAGERDUTY_ROUTING_KEY` | Optional PagerDuty Events API integration                     |
-| `ALERT_WEBHOOK_URL`     | Optional lifecycle-event destination                          |
-| `ALERT_WEBHOOK_SECRET`  | Signs lifecycle webhooks using HMAC-SHA256                    |
-| `OPENAI_API_KEY`        | Optional LLM-assisted investigation                           |
+| Variable                | Purpose                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------- |
+| `TURSO_DATABASE_URL`    | Remote `turso://` database URL                                                |
+| `TURSO_AUTH_TOKEN`      | Server-only database authentication token                                     |
+| `RESEND_API_KEY`        | Server-only Resend key beginning with `re_`                                   |
+| `EMAIL_FROM`            | Sender on a verified domain, such as `CrashLens <alerts@mail.yourdomain.com>` |
+| `APP_ORIGIN`            | Exact application origin used in account links                                |
+| `ADMIN_EMAILS`          | Comma-separated administrator email allowlist                                 |
+| `INGESTION_TOKEN`       | Protects machine log, trace, and deployment ingestion                         |
+| `INGESTION_TEAM_ID`     | Routes machine data into the correct team workspace                           |
+| `MONITOR_CRON_TOKEN`    | Authenticates the external uptime runner                                      |
+| `SLACK_WEBHOOK_URL`     | Optional Slack incident notifications                                         |
+| `PAGERDUTY_ROUTING_KEY` | Optional PagerDuty Events API integration                                     |
+| `ALERT_WEBHOOK_URL`     | Optional lifecycle-event destination                                          |
+| `ALERT_WEBHOOK_SECRET`  | Signs lifecycle webhooks using HMAC-SHA256                                    |
+| `OPENAI_API_KEY`        | Optional LLM-assisted investigation                                           |
 
 Never commit `.dev.vars`, API keys, database URLs, or webhook secrets.
 
@@ -314,9 +314,23 @@ Account creation and password sign-in do not require email verification. Passwor
 Resend configuration:
 
 1. Create a Resend account.
-2. Verify a sender domain.
-3. Create a sending API key.
-4. Add `RESEND_API_KEY`, `EMAIL_FROM`, and `APP_ORIGIN` to `.dev.vars` locally and to the hosting environment in production.
+2. Add and verify a domain in Resend. A dedicated sending subdomain such as `mail.yourdomain.com` is recommended.
+3. Create a sending API key and store it only as the server-side `RESEND_API_KEY` secret. CrashLens validates that it begins with `re_`, but never logs it.
+4. Set `EMAIL_FROM` to a mailbox on that exact verified domain, for example `CrashLens <alerts@mail.yourdomain.com>`. A friendly display name is optional.
+5. Set `APP_ORIGIN` to the public HTTPS origin so password-reset links point back to the deployed application.
+6. Redeploy, sign in, and use the email connection test in CrashLens. Resend acceptance is recorded without logging the recipient, subject, body, or API key.
+
+For local development, `CrashLens <onboarding@resend.dev>` can be used as `EMAIL_FROM`. Resend restricts this development sender to the email address associated with your Resend account; it is not a production sender and cannot deliver to arbitrary users.
+
+Example production configuration:
+
+```dotenv
+RESEND_API_KEY=re_replace_with_a_deployment_secret
+EMAIL_FROM=CrashLens <alerts@mail.yourdomain.com>
+APP_ORIGIN=https://crashlens.yourdomain.com
+```
+
+On Cloudflare, add `RESEND_API_KEY` as an encrypted secret rather than a plain Wrangler variable. `EMAIL_FROM` and `APP_ORIGIN` may be ordinary environment variables. A missing key, malformed key, placeholder sender, malformed sender, unverified domain, restricted key, rate limit, or exhausted quota produces an actionable outbox error and a sanitized operational log. Failed sends are retried with backoff and an idempotency key, without making duplicate delivery requests.
 
 ## Uptime runner
 

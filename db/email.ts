@@ -1,7 +1,79 @@
 import type { CrashLensEnv } from './runtime';
+import { Resend } from 'resend';
+
+type ResendError = {
+  message?: string;
+  name?: string;
+  statusCode?: number | null;
+};
+
+export type ResendEmailClient = {
+  emails: {
+    send(
+      message: {
+        from: string;
+        to: string[];
+        subject: string;
+        text: string;
+        html: string;
+      },
+      options?: { idempotencyKey?: string },
+    ): Promise<{
+      data: { id: string } | null;
+      error: ResendError | null;
+    }>;
+  };
+};
+
+type ResendConfiguration =
+  | { configured: true; apiKey: string; from: string }
+  | { configured: false; error: string };
+
+const EMAIL_ADDRESS = /^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/;
+
+function senderAddress(from: string) {
+  const match = from.match(/<([^<>]+)>\s*$/);
+  return (match?.[1] ?? from).trim().toLowerCase();
+}
+
+export function resendConfiguration(env: CrashLensEnv): ResendConfiguration {
+  const apiKey = env.RESEND_API_KEY?.trim();
+  const from = env.EMAIL_FROM?.trim();
+  if (!apiKey)
+    return {
+      configured: false,
+      error:
+        'RESEND_API_KEY is missing. Add a Resend API key as a deployment secret.',
+    };
+  if (!/^re_[A-Za-z0-9_-]{8,}$/.test(apiKey))
+    return {
+      configured: false,
+      error: 'RESEND_API_KEY is invalid. Resend API keys begin with "re_".',
+    };
+  if (!from)
+    return {
+      configured: false,
+      error:
+        'EMAIL_FROM is missing. Use an address on a verified Resend domain.',
+    };
+  const address = senderAddress(from);
+  if (!EMAIL_ADDRESS.test(address))
+    return {
+      configured: false,
+      error:
+        'EMAIL_FROM is invalid. Use "CrashLens <alerts@verified-domain.example>" or a plain email address.',
+    };
+  if (/@(example\.com|example\.net|example\.org)$/i.test(address))
+    return {
+      configured: false,
+      error:
+        'EMAIL_FROM uses a placeholder domain. Configure a verified Resend domain or onboarding@resend.dev for development.',
+    };
+  return { configured: true, apiKey, from };
+}
 
 export function emailConfigured(env: CrashLensEnv) {
-  return Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
+  return resendConfiguration(env).configured;
 }
 
 function escapeHtml(value: string) {
@@ -72,7 +144,62 @@ export async function queueTeamEmail(
 }
 
 export async function flushEmails(env: CrashLensEnv) {
-  if (!emailConfigured(env)) return { configured: false, accepted: 0 };
+  return flushEmailsWithClient(env);
+}
+
+function providerError(error: ResendError) {
+  if (error.statusCode === 401)
+    return 'Resend rejected RESEND_API_KEY. Replace the deployment secret with a valid API key.';
+  switch (error.name) {
+    case 'invalid_api_key':
+    case 'missing_api_key':
+      return 'Resend rejected RESEND_API_KEY. Replace the deployment secret with a valid API key.';
+    case 'restricted_api_key':
+      return 'RESEND_API_KEY is not permitted to send this email. Review the key permissions in Resend.';
+    case 'invalid_from_address':
+      return 'Resend rejected EMAIL_FROM. Use a valid sender on a verified Resend domain.';
+    case 'validation_error':
+      return 'Resend rejected the email configuration. Verify EMAIL_FROM and its domain in Resend.';
+    case 'rate_limit_exceeded':
+      return 'Resend rate limit reached. CrashLens will retry automatically.';
+    case 'daily_quota_exceeded':
+    case 'monthly_quota_exceeded':
+      return 'Resend sending quota exceeded. Increase the quota or wait for it to reset.';
+    default:
+      return 'Resend could not accept the email. CrashLens will retry automatically.';
+  }
+}
+
+async function withTimeout<T>(promise: Promise<T>, milliseconds: number) {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(
+          () => reject(new Error('Resend request timed out.')),
+          milliseconds,
+        );
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
+export async function flushEmailsWithClient(
+  env: CrashLensEnv,
+  suppliedClient?: ResendEmailClient,
+) {
+  const configuration = resendConfiguration(env);
+  if (!configuration.configured)
+    return {
+      configured: false as const,
+      accepted: 0,
+      failed: 0,
+      error: configuration.error,
+    };
+  const client = suppliedClient ?? new Resend(configuration.apiKey);
   const now = Date.now();
   const rows = await env.DB.prepare(
     `SELECT * FROM email_outbox WHERE status = 'pending' AND next_attempt_at <= ? AND lease_until < ? LIMIT 10`,
@@ -86,6 +213,8 @@ export async function flushEmails(env: CrashLensEnv) {
       attempts: number;
     }>();
   let accepted = 0;
+  let failed = 0;
+  let lastError: string | undefined;
   for (const row of rows.results) {
     const claim = await env.DB.prepare(
       "UPDATE email_outbox SET lease_until = ? WHERE id = ? AND status = 'pending' AND lease_until < ?",
@@ -94,32 +223,45 @@ export async function flushEmails(env: CrashLensEnv) {
       .run();
     if (!claim.meta.changes) continue;
     try {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        signal: AbortSignal.timeout(10000),
-        headers: {
-          Authorization: `Bearer ${env.RESEND_API_KEY}`,
-          'Content-Type': 'application/json',
-          'Idempotency-Key': row.id,
-        },
-        body: JSON.stringify({
-          from: env.EMAIL_FROM,
-          to: [row.recipient],
-          subject: row.subject,
-          text: row.body,
-          html: buildBrandedEmailHtml(row.subject, row.body),
-        }),
-      });
-      if (!response.ok)
-        throw new Error(`Email provider returned ${response.status}`);
+      const response = await withTimeout(
+        client.emails.send(
+          {
+            from: configuration.from,
+            to: [row.recipient],
+            subject: row.subject,
+            text: row.body,
+            html: buildBrandedEmailHtml(row.subject, row.body),
+          },
+          { idempotencyKey: row.id },
+        ),
+        10000,
+      );
+      if (response.error) {
+        console.warn('Resend rejected an outbox email', {
+          outboxId: row.id,
+          code: response.error.name ?? 'unknown',
+          statusCode: response.error.statusCode ?? null,
+        });
+        throw new Error(providerError(response.error));
+      }
+      if (!response.data?.id)
+        throw new Error(
+          'Resend returned an invalid response. CrashLens will retry automatically.',
+        );
       await env.DB.prepare(
         "UPDATE email_outbox SET status = 'accepted', body = '', accepted_at = CURRENT_TIMESTAMP, attempts = attempts + 1, lease_until = 0, last_error = NULL WHERE id = ?",
       )
         .bind(row.id)
         .run();
       accepted++;
+      console.info('Resend accepted an outbox email', { outboxId: row.id });
     } catch (error) {
       const attempts = row.attempts + 1;
+      const message =
+        error instanceof Error && error.message.startsWith('Resend')
+          ? error.message
+          : 'Resend request failed. CrashLens will retry automatically.';
+      lastError = message;
       await env.DB.prepare(
         'UPDATE email_outbox SET attempts = ?, status = ?, next_attempt_at = ?, lease_until = 0, last_error = ? WHERE id = ?',
       )
@@ -127,11 +269,22 @@ export async function flushEmails(env: CrashLensEnv) {
           attempts,
           attempts >= 5 ? 'failed' : 'pending',
           now + Math.min(3600000, 60000 * 2 ** attempts),
-          error instanceof Error ? error.message : 'Email delivery failed',
+          message,
           row.id,
         )
         .run();
+      failed++;
+      console.warn('Resend delivery attempt failed', {
+        outboxId: row.id,
+        attempt: attempts,
+        willRetry: attempts < 5,
+      });
     }
   }
-  return { configured: true, accepted };
+  return {
+    configured: true as const,
+    accepted,
+    failed,
+    ...(lastError ? { error: lastError } : {}),
+  };
 }

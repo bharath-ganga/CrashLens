@@ -2,7 +2,9 @@
 TURSO_DATABASE_URL=turso://your-database.turso.io
 TURSO_AUTH_TOKEN=
 RESEND_API_KEY=
-EMAIL_FROM=CrashLens <alerts@example.com>
+# Development only: Resend permits onboarding@resend.dev to send test mail to
+# the email address associated with your Resend account.
+EMAIL_FROM=CrashLens <onboarding@resend.dev>
 APP_ORIGIN=http://localhost:3000
 ADMIN_EMAILS=you@example.com
 

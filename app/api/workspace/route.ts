@@ -6,7 +6,12 @@ import {
   getRuntimeEnv,
   isPlatformAdmin,
 } from '@/db/runtime';
-import { emailConfigured, queueEmail, flushEmails } from '@/db/email';
+import {
+  emailConfigured,
+  flushEmails,
+  queueEmail,
+  resendConfiguration,
+} from '@/db/email';
 import {
   MAX_LOG_FILE_MB,
   MAX_WORKSPACE_PAYLOAD_BYTES,
@@ -44,44 +49,33 @@ export async function GET(request: Request) {
     invites,
     auditEvents,
     members,
-    ingestionCount,
-  ] = await Promise.all([
+    ingestionCounts,
+  ] = await ctx.runtime.DB.batch([
     ctx.runtime.DB.prepare(
       `SELECT i.*, u.name AS assignee_name FROM incidents i LEFT JOIN users u ON u.id = i.assigned_to WHERE i.team_id = ? ORDER BY i.updated_at DESC LIMIT 100`,
-    )
-      .bind(ctx.teamId)
-      .all(),
+    ).bind(ctx.teamId),
     ctx.runtime.DB.prepare(
       `SELECT c.*, u.name AS user_name, u.email AS user_email FROM comments c LEFT JOIN users u ON u.id = c.user_id JOIN incidents i ON i.id = c.incident_id WHERE i.team_id = ? ORDER BY c.created_at DESC LIMIT 200`,
-    )
-      .bind(ctx.teamId)
-      .all(),
+    ).bind(ctx.teamId),
     ctx.runtime.DB.prepare(
       'SELECT id, type, name, status, config_json, created_at, updated_at FROM connectors WHERE team_id = ? ORDER BY created_at DESC',
-    )
-      .bind(ctx.teamId)
-      .all(),
+    ).bind(ctx.teamId),
     ctx.runtime.DB.prepare(
       'SELECT id, email, role, status, created_at FROM team_invites WHERE team_id = ? ORDER BY created_at DESC',
-    )
-      .bind(ctx.teamId)
-      .all(),
+    ).bind(ctx.teamId),
     ctx.runtime.DB.prepare(
       'SELECT action, target_type, target_id, metadata_json, created_at FROM audit_events WHERE team_id = ? ORDER BY created_at DESC LIMIT 50',
-    )
-      .bind(ctx.teamId)
-      .all(),
+    ).bind(ctx.teamId),
     ctx.runtime.DB.prepare(
       `SELECT u.id, u.email, u.name, tm.role FROM team_members tm JOIN users u ON u.id = tm.user_id WHERE tm.team_id = ?`,
-    )
-      .bind(ctx.teamId)
-      .all(),
+    ).bind(ctx.teamId),
     ctx.runtime.DB.prepare(
       'SELECT COUNT(*) AS count FROM ingestions WHERE team_id = ?',
-    )
-      .bind(ctx.teamId)
-      .first<{ count: number }>(),
+    ).bind(ctx.teamId),
   ]);
+  const ingestionCount = ingestionCounts.results[0] as
+    | { count?: number }
+    | undefined;
   return json({
     user: ctx.user,
     team: { id: ctx.teamId, name: 'CrashLens Operations' },
@@ -288,10 +282,11 @@ export async function POST(request: Request) {
     return json({ ok: true, configured: true });
   }
   if (action === 'test_email') {
-    if (!emailConfigured(ctx.runtime))
+    const emailConfiguration = resendConfiguration(ctx.runtime);
+    if (!emailConfiguration.configured)
       return json(
         {
-          error: 'Configure RESEND_API_KEY and EMAIL_FROM first.',
+          error: emailConfiguration.error,
           configured: false,
         },
         503,
@@ -305,6 +300,17 @@ export async function POST(request: Request) {
       'Your CrashLens email test was requested successfully.',
     );
     const delivery = await flushEmails(ctx.runtime);
+    if (delivery.failed)
+      return json(
+        {
+          error:
+            delivery.error ??
+            'Resend could not accept the test email. Check the email outbox for details.',
+          configured: true,
+          delivery,
+        },
+        502,
+      );
     return json({ ok: true, delivery });
   }
   return json({ error: 'Unknown action' }, 400);

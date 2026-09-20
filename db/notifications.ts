@@ -1,5 +1,5 @@
 import type { CrashLensEnv } from './runtime';
-import { queueTeamEmail } from './email';
+import { emailConfigured, queueTeamEmail } from './email';
 
 type Lifecycle = {
   event: 'opened' | 'resolved' | 'acknowledged';
@@ -31,7 +31,7 @@ async function hmac(secret: string, body: string) {
 
 export function notificationCapabilities(env: CrashLensEnv) {
   return {
-    email: Boolean(env.RESEND_API_KEY && env.EMAIL_FROM),
+    email: emailConfigured(env),
     slack: Boolean(env.SLACK_WEBHOOK_URL),
     pagerduty: Boolean(env.PAGERDUTY_ROUTING_KEY),
     webhook: Boolean(env.ALERT_WEBHOOK_URL && env.ALERT_WEBHOOK_SECRET),

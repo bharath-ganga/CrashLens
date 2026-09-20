@@ -179,7 +179,9 @@ export default function ProductionIntelligencePanel() {
           </div>
           <div className="flex h-10 items-center gap-2 border border-border bg-muted px-4 text-sm text-muted-foreground">
             <RadioTower size={16} />
-            Waiting for real telemetry
+            {trace
+              ? `${data?.traces.length ?? 1} live trace${(data?.traces.length ?? 1) === 1 ? '' : 's'} received`
+              : 'Waiting for real telemetry'}
           </div>
         </div>
         <div className="grid gap-px bg-muted md:grid-cols-2 xl:grid-cols-3">

@@ -3,6 +3,7 @@ import {
   type Client,
   type InValue,
 } from '@tursodatabase/serverless/compat';
+import { normalizeDatabaseRow } from './rows';
 
 export type DatabaseValue =
   | ArrayBuffer
@@ -52,12 +53,16 @@ function normalizeValue(value: DatabaseValue): InValue {
 }
 
 function toResult<T>(result: {
+  columns: string[];
   rows: unknown[];
   rowsAffected: number;
   lastInsertRowid?: bigint;
 }): DatabaseResult<T> {
+  const rows = result.rows.map((row) =>
+    normalizeDatabaseRow(result.columns, row),
+  );
   return {
-    results: result.rows as unknown as T[],
+    results: rows as T[],
     success: true,
     meta: {
       changes: result.rowsAffected,
@@ -66,7 +71,7 @@ function toResult<T>(result: {
         result.lastInsertRowid === undefined
           ? null
           : Number(result.lastInsertRowid),
-      rows_read: result.rows.length,
+      rows_read: rows.length,
       rows_written: result.rowsAffected,
     },
   };
@@ -92,11 +97,14 @@ class TursoStatement implements BoundStatement {
   }
 
   async first<T = Record<string, unknown>>(column?: string): Promise<T | null> {
-    const result = await this.client.execute({ sql: this.sql, args: this.args });
+    const result = await this.client.execute({
+      sql: this.sql,
+      args: this.args,
+    });
     const row = result.rows[0];
     if (!row) return null;
     if (column !== undefined) return (row[column] ?? null) as T | null;
-    return row as unknown as T;
+    return normalizeDatabaseRow(result.columns, row) as T;
   }
 
   async all<T = Record<string, unknown>>(): Promise<DatabaseResult<T>> {
