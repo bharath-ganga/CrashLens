@@ -13,8 +13,7 @@ CrashLens collects application logs and telemetry, removes common sensitive valu
 
 | Environment           | URL                                                                                                       | Access                                                                 |
 | --------------------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Cloudflare production | [crashlens-production.bharathganga7.workers.dev](https://crashlens-production.bharathganga7.workers.dev/) | Public application; a CrashLens account is required for workspace data |
-| OpenAI Sites preview  | [crashlens.bharathganga7.chatgpt.site](https://crashlens.bharathganga7.chatgpt.site/)                     | Owner-private preview deployment                                       |
+| Cloudflare production | [crashlens-production.bharathganga7.workers.dev](https://crashlens-production.bharathganga7.workers.dev/) | Public application; a CrashLens account is required for workspace data |                                 |
 
 The Cloudflare deployment is the primary live application. The Sites deployment is kept private for owner testing.
 
