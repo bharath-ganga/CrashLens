@@ -76,6 +76,11 @@ export function emailConfigured(env: CrashLensEnv) {
   return resendConfiguration(env).configured;
 }
 
+export function deliverableEmailAddress(email: string) {
+  const normalized = email.trim().toLowerCase();
+  return !normalized.endsWith('.local') && !normalized.endsWith('.test');
+}
+
 function escapeHtml(value: string) {
   return value
     .replaceAll('&', '&amp;')
@@ -147,10 +152,12 @@ export async function queueEmail(
   subject: string,
   body: string,
 ) {
+  const normalizedRecipient = recipient.trim().toLowerCase();
+  const testRecipient = !deliverableEmailAddress(normalizedRecipient);
   const suppression = await env.DB.prepare(
     'SELECT reason FROM email_suppressions WHERE email=?',
   )
-    .bind(recipient.trim().toLowerCase())
+    .bind(normalizedRecipient)
     .first<{ reason: string }>();
   await env.DB.prepare(`INSERT OR IGNORE INTO email_outbox (id,event_key,team_id,recipient,subject,body,status,last_error)
     VALUES (?,?,?,?,?,?,?,?)`)
@@ -158,11 +165,15 @@ export async function queueEmail(
       crypto.randomUUID(),
       event,
       teamId,
-      recipient,
+      normalizedRecipient,
       subject.slice(0, 180),
       body.slice(0, 12000),
-      suppression ? 'suppressed' : 'pending',
-      suppression ? `Recipient suppressed: ${suppression.reason}` : null,
+      suppression || testRecipient ? 'suppressed' : 'pending',
+      suppression
+        ? `Recipient suppressed: ${suppression.reason}`
+        : testRecipient
+          ? 'Recipient uses a reserved non-deliverable domain.'
+          : null,
     )
     .run();
 }

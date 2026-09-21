@@ -145,6 +145,7 @@ type WorkspaceView =
   | 'clients';
 
 type IncidentFilter = 'all' | 'open' | 'critical' | 'resolved';
+type AccessState = 'checking' | 'authenticated' | 'redirecting' | 'unavailable';
 
 function time(timestamp: string) {
   return new Date(timestamp).toLocaleTimeString('en-US', {
@@ -227,6 +228,7 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [view, setView] = useState<WorkspaceView>('incidents');
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [accessState, setAccessState] = useState<AccessState>('checking');
   const [workspaceBusy, setWorkspaceBusy] = useState(false);
   const [, setWorkspaceMessage] = useState('Connecting secure workspace…');
   const [health, setHealth] = useState<{
@@ -356,14 +358,18 @@ export default function Home() {
             fetch('/api/health', { cache: 'no-store' }),
             fetch('/api/logs', { cache: 'no-store' }),
           ]);
+        if (workspaceResponse.status === 401) {
+          setAccessState('redirecting');
+          window.location.replace('/account?mode=login');
+          return;
+        }
         if (!workspaceResponse.ok)
           throw new Error(
-            workspaceResponse.status === 401
-              ? 'Sign in to enable persistent team storage.'
-              : 'Workspace is temporarily unavailable.',
+            'Workspace is temporarily unavailable.',
           );
         const data = (await workspaceResponse.json()) as Workspace;
         setWorkspace(data);
+        setAccessState('authenticated');
         if (logsResponse.ok) {
           const logData = (await logsResponse.json()) as {
             dataset: Dataset | null;
@@ -385,6 +391,7 @@ export default function Home() {
           );
         setWorkspaceMessage('Persistent workspace connected');
       } catch (reason) {
+        setAccessState('unavailable');
         setWorkspaceMessage(
           reason instanceof Error ? reason.message : 'Workspace unavailable',
         );
@@ -510,6 +517,53 @@ export default function Home() {
       setRemovingLogs(false);
     }
   }
+
+  if (accessState !== 'authenticated')
+    return (
+      <main className="grid min-h-screen place-items-center bg-background px-6 text-foreground">
+        <Card className="w-full max-w-md border border-border bg-background p-8 text-center">
+          <div className="mx-auto mb-5 grid size-12 place-items-center bg-primary text-lg font-bold text-primary-foreground">
+            CL
+          </div>
+          {accessState === 'unavailable' ? (
+            <>
+              <h1 className="text-xl font-semibold">
+                Sign-in verification is unavailable
+              </h1>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                CrashLens could not verify your session. The workspace remains
+                protected. Please sign in again or retry shortly.
+              </p>
+              <div className="mt-6 flex justify-center gap-3">
+                <Button type="button" onClick={() => window.location.reload()}>
+                  Retry
+                </Button>
+                <Button variant="outline" render={<Link href="/account?mode=login" />}>
+                  Sign in
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <LoaderCircle
+                className="mx-auto mb-4 animate-spin text-primary"
+                size={24}
+              />
+              <h1 className="text-xl font-semibold">
+                {accessState === 'redirecting'
+                  ? 'Sign-in required'
+                  : 'Verifying your session'}
+              </h1>
+              <p className="mt-3 text-sm text-muted-foreground">
+                {accessState === 'redirecting'
+                  ? 'Taking you to the secure CrashLens sign-in page…'
+                  : 'Please wait while CrashLens securely checks your account.'}
+              </p>
+            </>
+          )}
+        </Card>
+      </main>
+    );
 
   return (
     <WorkspaceShell

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildBrandedEmailHtml,
+  deliverableEmailAddress,
   flushEmailsWithClient,
   resendConfiguration,
   type ResendEmailClient,
@@ -229,4 +230,10 @@ void test('identifies a Resend 401 validation response as an invalid API key', a
     'Resend rejected RESEND_API_KEY. Replace the deployment secret with a valid API key.',
   );
   assert.match(state.failure, /Replace the deployment secret/);
+});
+
+void test('reserved test domains are never sent to the email provider', () => {
+  assert.equal(deliverableEmailAddress('automation@crashlens.test'), false);
+  assert.equal(deliverableEmailAddress('ingestion@crashlens.local'), false);
+  assert.equal(deliverableEmailAddress('operator@example.dev'), true);
 });

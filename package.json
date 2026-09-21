@@ -13,6 +13,7 @@
     "migrate:turso": "node --env-file-if-exists=.dev.vars scripts/migrate-turso.mjs",
     "lint": "oxlint app db lib tests",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "test:e2e": "node --env-file-if-exists=.dev.vars scripts/e2e-api.mjs",
     "format": "oxfmt"
   },
   "dependencies": {
