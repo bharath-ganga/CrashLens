@@ -18,6 +18,10 @@ import {
   MAX_WORKSPACE_PAYLOAD_BYTES,
 } from '@/lib/upload-limits';
 import { waitUntil } from 'cloudflare:workers';
+import {
+  flushIntegrationEvents,
+  queueIntegrationEvent,
+} from '@/db/integrations';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,6 +101,22 @@ export async function GET(request: Request) {
       objectStorage: true,
       openai: Boolean(ctx.runtime.OPENAI_API_KEY),
       slack: Boolean(ctx.runtime.SLACK_WEBHOOK_URL),
+      discord: Boolean(ctx.runtime.DISCORD_WEBHOOK_URL),
+      sentry: Boolean(ctx.runtime.SENTRY_DSN),
+      github: Boolean(
+        ctx.runtime.GITHUB_TOKEN && ctx.runtime.GITHUB_REPOSITORY,
+      ),
+      jira: Boolean(
+        ctx.runtime.JIRA_BASE_URL &&
+        ctx.runtime.JIRA_EMAIL &&
+        ctx.runtime.JIRA_API_TOKEN &&
+        ctx.runtime.JIRA_PROJECT_KEY,
+      ),
+      pagerduty: Boolean(ctx.runtime.PAGERDUTY_ROUTING_KEY),
+      outboundWebhook: Boolean(
+        ctx.runtime.ALERT_WEBHOOK_URL && ctx.runtime.ALERT_WEBHOOK_SECRET,
+      ),
+      otlpExport: Boolean(ctx.runtime.OTEL_EXPORTER_OTLP_ENDPOINT),
       email: emailConfigured(ctx.runtime),
       externalIngestion: Boolean(ctx.runtime.INGESTION_TOKEN),
       piiRedaction: true,
@@ -186,6 +206,18 @@ export async function POST(request: Request) {
       incidentId,
       { status, assignedTo: body.assignedTo ?? null },
     );
+    await queueIntegrationEvent(ctx.runtime, {
+      event: status === 'resolved' ? 'resolved' : 'acknowledged',
+      id: incidentId,
+      teamId: ctx.teamId,
+      title: incident.title,
+      service: incident.service,
+      severity: incident.severity,
+      detail: `Incident status changed to ${status} by ${ctx.user.name}.`,
+      environment: 'production',
+      url: ctx.runtime.APP_ORIGIN,
+    });
+    waitUntil(flushIntegrationEvents(ctx.runtime).catch(() => undefined));
     await queueTeamEmail(
       ctx.runtime,
       ctx.teamId,
@@ -270,6 +302,10 @@ export async function POST(request: Request) {
       'kubernetes',
       'cloudwatch',
       'sentry',
+      'github',
+      'jira',
+      'discord',
+      'pagerduty',
       'datadog',
       'opentelemetry',
       'webhook',
@@ -285,7 +321,16 @@ export async function POST(request: Request) {
       .bind(ctx.teamId, type)
       .first<{ id: string }>();
     const id = existing?.id ?? crypto.randomUUID();
-    const status = ['openai', 'slack', 'email'].includes(type)
+    const status = [
+      'openai',
+      'slack',
+      'discord',
+      'email',
+      'github',
+      'jira',
+      'sentry',
+      'pagerduty',
+    ].includes(type)
       ? 'awaiting_secret'
       : 'ready_for_credentials';
     await ctx.runtime.DB.prepare(`INSERT INTO connectors (id, team_id, type, name, status, config_json, created_by)

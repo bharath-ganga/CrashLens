@@ -10,6 +10,7 @@ export type CrashLensEnv = Cloudflare.Env & {
   TURSO_AUTH_TOKEN: string;
   OPENAI_API_KEY?: string;
   SLACK_WEBHOOK_URL?: string;
+  DISCORD_WEBHOOK_URL?: string;
   EMAIL_WEBHOOK_URL?: string;
   INGESTION_TOKEN?: string;
   RESEND_API_KEY?: string;
@@ -23,6 +24,17 @@ export type CrashLensEnv = Cloudflare.Env & {
   PAGERDUTY_ROUTING_KEY?: string;
   ALERT_WEBHOOK_URL?: string;
   ALERT_WEBHOOK_SECRET?: string;
+  SENTRY_DSN?: string;
+  GITHUB_TOKEN?: string;
+  GITHUB_REPOSITORY?: string;
+  GITHUB_LABELS?: string;
+  JIRA_BASE_URL?: string;
+  JIRA_EMAIL?: string;
+  JIRA_API_TOKEN?: string;
+  JIRA_PROJECT_KEY?: string;
+  JIRA_ISSUE_TYPE?: string;
+  OTEL_EXPORTER_OTLP_ENDPOINT?: string;
+  OTEL_EXPORTER_OTLP_HEADERS?: string;
   ADMIN_EMAILS?: string;
   INGESTION_TEAM_ID?: string;
 };

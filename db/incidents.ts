@@ -1,6 +1,7 @@
 import type { Incident, LogEntry, TimelineEvent } from '@/lib/log-analyzer';
 import { audit, redactSensitiveData, type CrashLensEnv } from './runtime';
 import { queueTeamEmail, flushEmails } from './email';
+import { flushIntegrationEvents, queueIntegrationEvent } from './integrations';
 
 type SaveAnalysisInput = {
   filename: string;
@@ -137,6 +138,17 @@ export async function saveAnalysis(
       `Dear CrashLens team member,\n\nCrashLens has detected a production incident that requires review.\n\nIncident: ${redactSensitiveData(incident.title)}\nService: ${redactSensitiveData(incident.service)}\nSeverity: ${incident.severity.toUpperCase()}\nRelated log entries: ${incident.logs.length}\nIncident reference: ${incidentId}\n\nPlease open CrashLens to review the incident timeline, supporting evidence, and recommended next actions.\n\nYours sincerely,\nCrashLens Operations Team`,
       'incident',
     );
+    await queueIntegrationEvent(env, {
+      event: 'opened',
+      id: incidentId,
+      teamId,
+      title: redactSensitiveData(incident.title).slice(0, 180),
+      service: redactSensitiveData(incident.service).slice(0, 100),
+      severity: incident.severity,
+      detail: redactSensitiveData(incident.trigger).slice(0, 2000),
+      environment: 'production',
+      url: env.APP_ORIGIN,
+    });
   }
   await audit(
     env.DB,
@@ -160,14 +172,6 @@ export async function saveAnalysis(
       .map((incident) => `${incident.title} (${incident.service})`)
       .join(', ')}`;
     const deliveries: Promise<Response>[] = [];
-    if (env.SLACK_WEBHOOK_URL)
-      deliveries.push(
-        fetch(env.SLACK_WEBHOOK_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: `🚨 ${summary}` }),
-        }),
-      );
     if (env.EMAIL_WEBHOOK_URL)
       deliveries.push(
         fetch(env.EMAIL_WEBHOOK_URL, {
@@ -183,6 +187,7 @@ export async function saveAnalysis(
       );
     if (deliveries.length) await Promise.allSettled(deliveries);
   }
+  await flushIntegrationEvents(env);
   await flushEmails(env);
   return ingestionId;
 }

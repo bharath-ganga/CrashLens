@@ -1,6 +1,7 @@
 import type { CrashLensEnv } from './runtime';
 import { nextMonitorState, probeEndpoint } from '../lib/uptime';
 import { flushEmails } from './email';
+import { flushIntegrationEvents } from './integrations';
 import { queueDueEmailDigests } from './notifications';
 import { notifyLifecycle } from './notifications';
 
@@ -138,6 +139,7 @@ export async function runMonitoring(env: CrashLensEnv) {
     .bind(now - 30 * 86400000)
     .run();
   const digests = await queueDueEmailDigests(env, new Date(now));
+  const integrations = await flushIntegrationEvents(env);
   const mail = await flushEmails(env);
-  return { checked: due.results.length, digests, mail };
+  return { checked: due.results.length, digests, integrations, mail };
 }

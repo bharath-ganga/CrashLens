@@ -1611,6 +1611,10 @@ function OperationsConsole({
     ['kubernetes', 'Kubernetes', 'Cluster event and pod log ingestion'],
     ['cloudwatch', 'CloudWatch', 'AWS log subscription destination'],
     ['sentry', 'Sentry', 'Issue webhook and event correlation'],
+    ['github', 'GitHub Issues', 'Deduplicated engineering follow-up issues'],
+    ['jira', 'Jira', 'Project issue creation for incident follow-up'],
+    ['discord', 'Discord', 'Incident notifications through webhooks'],
+    ['pagerduty', 'PagerDuty', 'Trigger and resolve on-call incidents'],
     ['datadog', 'Datadog', 'Monitor and log webhook intake'],
     [
       'opentelemetry',
@@ -1934,11 +1938,24 @@ function OperationsConsole({
                 ? workspace.capabilities.openai
                 : type === 'slack'
                   ? workspace.capabilities.slack
-                  : type === 'email'
-                    ? workspace.capabilities.email
-                    : type === 'webhook'
-                      ? workspace.capabilities.externalIngestion
-                      : false;
+                  : type === 'discord'
+                    ? workspace.capabilities.discord
+                    : type === 'sentry'
+                      ? workspace.capabilities.sentry
+                      : type === 'github'
+                        ? workspace.capabilities.github
+                        : type === 'jira'
+                          ? workspace.capabilities.jira
+                          : type === 'pagerduty'
+                            ? workspace.capabilities.pagerduty
+                            : type === 'opentelemetry'
+                              ? workspace.capabilities.otlpExport ||
+                                workspace.capabilities.externalIngestion
+                              : type === 'email'
+                                ? workspace.capabilities.email
+                                : type === 'webhook'
+                                  ? workspace.capabilities.outboundWebhook
+                                  : false;
             return (
               <article key={type} className="bg-background p-5">
                 <div className="flex items-start justify-between">
