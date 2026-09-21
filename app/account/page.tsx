@@ -13,14 +13,24 @@ const ACCOUNT_REQUEST_TIMEOUT_MS = 20_000;
 export default function AccountPage() {
   const [mode, setMode] = useState('login');
   const [token, setToken] = useState('');
+  const [inviteId, setInviteId] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [signedIn, setSignedIn] = useState(false);
+  const [preferences, setPreferences] = useState({
+    incidentAlerts: true,
+    teamActivity: true,
+    productUpdates: false,
+    digestFrequency: 'none',
+  });
   useEffect(() => {
     const init = window.setTimeout(() => {
       const selected = new URLSearchParams(window.location.search).get('mode');
+      setInviteId(
+        new URLSearchParams(window.location.search).get('invite') ?? '',
+      );
       if (
         selected &&
         ['login', 'signup', 'forgot', 'reset', 'verify', 'resend'].includes(
@@ -39,11 +49,16 @@ export default function AccountPage() {
       void fetch('/api/account')
         .then(
           (r) =>
-            r.json() as Promise<{ emailConfigured: boolean; user: unknown }>,
+            r.json() as Promise<{
+              emailConfigured: boolean;
+              user: unknown;
+              preferences?: typeof preferences;
+            }>,
         )
         .then((d) => {
           setConfigured(d.emailConfigured);
           setSignedIn(Boolean(d.user));
+          if (d.preferences) setPreferences(d.preferences);
         })
         .catch(() => setConfigured(false));
     }, 0);
@@ -82,8 +97,26 @@ export default function AccountPage() {
       };
       if (!response.ok) throw new Error(data.error ?? 'Request failed');
       if (mode === 'login') {
+        if (inviteId) {
+          const invitation = await fetch('/api/workspace', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'accept_invite', inviteId }),
+          });
+          if (!invitation.ok) {
+            const result = (await invitation.json()) as { error?: string };
+            throw new Error(
+              result.error ?? 'Invitation could not be accepted.',
+            );
+          }
+        }
         window.location.assign('/');
         return;
+      }
+      if (mode === 'verify') {
+        setToken('');
+        setMode('login');
+        window.history.replaceState(null, '', '/account?mode=login');
       }
       if (mode === 'signup') setMode('login');
       setMessage(data.message);
@@ -103,6 +136,28 @@ export default function AccountPage() {
     setMode(next);
     setMessage('');
     setError('');
+  }
+  async function savePreferences() {
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      const response = await fetch('/api/account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_preferences', ...preferences }),
+      });
+      const data = (await response.json()) as {
+        error?: string;
+        message?: string;
+      };
+      if (!response.ok) throw new Error(data.error ?? 'Update failed');
+      setMessage(data.message ?? 'Email preferences updated.');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Update failed');
+    } finally {
+      setBusy(false);
+    }
   }
   const input = 'mt-2 h-11 w-full bg-background text-sm';
   return (
@@ -181,10 +236,67 @@ export default function AccountPage() {
           </p>
           {configured === false && (
             <p className="mt-5 border border-warning p-3 text-sm text-warning">
-              Email delivery awaits administrator setup. You can create an
-              account and sign in; password-reset emails are unavailable until
-              setup is complete.
+              Email delivery awaits administrator setup. Registration,
+              verification, and password recovery are unavailable until setup is
+              complete.
             </p>
+          )}
+          {signedIn && (
+            <section className="mt-6 border border-border p-4">
+              <h2 className="text-sm font-semibold">Email preferences</h2>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Essential account and security emails remain enabled.
+              </p>
+              {[
+                ['incidentAlerts', 'Incident and uptime alerts'],
+                ['teamActivity', 'Team activity notifications'],
+                ['productUpdates', 'Product announcements'],
+              ].map(([key, label]) => (
+                <label
+                  key={key}
+                  className="mt-3 flex items-center gap-3 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    checked={Boolean(
+                      preferences[key as keyof typeof preferences],
+                    )}
+                    onChange={(event) =>
+                      setPreferences((current) => ({
+                        ...current,
+                        [key]: event.target.checked,
+                      }))
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+              <Label className="mt-4 block text-sm">
+                Summary frequency
+                <select
+                  value={preferences.digestFrequency}
+                  onChange={(event) =>
+                    setPreferences((current) => ({
+                      ...current,
+                      digestFrequency: event.target.value,
+                    }))
+                  }
+                  className="mt-2 h-10 w-full border border-border bg-background px-3"
+                >
+                  <option value="none">No summary</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                </select>
+              </Label>
+              <Button
+                type="button"
+                disabled={busy}
+                onClick={() => void savePreferences()}
+                className="mt-4 w-full"
+              >
+                Save email preferences
+              </Button>
+            </section>
           )}
           <form onSubmit={submit} className="mt-6 space-y-4">
             {mode === 'signup' && (
@@ -235,8 +347,8 @@ export default function AccountPage() {
             )}
             {mode === 'verify' && (
               <p>
-                Confirm ownership of your email. Verification is optional for
-                signing in.
+                Confirm ownership of your email address to activate your account
+                and sign in.
               </p>
             )}
             {error && (
@@ -293,6 +405,13 @@ export default function AccountPage() {
                   onClick={() => change('forgot')}
                 >
                   Forgot password?
+                </Button>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  onClick={() => change('resend')}
+                >
+                  Resend verification
                 </Button>
               </>
             )}

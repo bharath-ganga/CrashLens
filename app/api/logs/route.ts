@@ -32,6 +32,81 @@ export async function GET(request: Request) {
   return json({ dataset: await latestAnalysis(ctx.runtime, ctx.teamId) });
 }
 
+export async function DELETE(request: Request) {
+  if (
+    request.headers.get('origin') &&
+    request.headers.get('origin') !== new URL(request.url).origin
+  )
+    return json({ error: 'Invalid origin' }, 403);
+
+  const ctx = await context(request);
+  if (!ctx) return json({ error: 'Authentication required' }, 401);
+  const ingestionId = new URL(request.url).searchParams.get('ingestionId');
+  if (!ingestionId)
+    return json({ error: 'Choose an uploaded log source to remove' }, 400);
+
+  const ingestion = await ctx.runtime.DB.prepare(
+    `SELECT id,filename,file_key,row_count FROM ingestions
+     WHERE id=? AND team_id=?`,
+  )
+    .bind(ingestionId, ctx.teamId)
+    .first<{
+      id: string;
+      filename: string;
+      file_key: string | null;
+      row_count: number;
+    }>();
+  if (!ingestion) return json({ error: 'Uploaded logs not found' }, 404);
+
+  if (ingestion.file_key) await ctx.runtime.FILES.delete(ingestion.file_key);
+  await ctx.runtime.DB.batch([
+    ctx.runtime.DB.prepare(
+      `DELETE FROM incident_logs WHERE incident_id IN
+       (SELECT id FROM incidents WHERE ingestion_id=? AND team_id=?)`,
+    ).bind(ingestion.id, ctx.teamId),
+    ctx.runtime.DB.prepare(
+      `DELETE FROM comments WHERE incident_id IN
+       (SELECT id FROM incidents WHERE ingestion_id=? AND team_id=?)`,
+    ).bind(ingestion.id, ctx.teamId),
+    ctx.runtime.DB.prepare(
+      `DELETE FROM postmortems WHERE incident_id IN
+       (SELECT id FROM incidents WHERE ingestion_id=? AND team_id=?)`,
+    ).bind(ingestion.id, ctx.teamId),
+    ctx.runtime.DB.prepare(
+      'DELETE FROM log_entries WHERE ingestion_id=? AND team_id=?',
+    ).bind(ingestion.id, ctx.teamId),
+    ctx.runtime.DB.prepare(
+      'DELETE FROM incidents WHERE ingestion_id=? AND team_id=?',
+    ).bind(ingestion.id, ctx.teamId),
+    ctx.runtime.DB.prepare(
+      'DELETE FROM ingestions WHERE id=? AND team_id=?',
+    ).bind(ingestion.id, ctx.teamId),
+  ]);
+  await ctx.runtime.DB.prepare(
+    `INSERT INTO audit_events
+     (id,team_id,actor_id,action,target_type,target_id,metadata_json)
+     VALUES (?,?,?,?,?,?,?)`,
+  )
+    .bind(
+      crypto.randomUUID(),
+      ctx.teamId,
+      ctx.user.id,
+      'analysis.deleted',
+      'ingestion',
+      ingestion.id,
+      JSON.stringify({
+        filename: ingestion.filename,
+        rows: ingestion.row_count,
+      }),
+    )
+    .run();
+
+  return json({
+    message: 'Uploaded logs removed.',
+    dataset: await latestAnalysis(ctx.runtime, ctx.teamId),
+  });
+}
+
 export async function POST(request: Request) {
   if (
     request.headers.get('origin') &&

@@ -932,6 +932,42 @@ export default function UptimePanel() {
           </p>
           <div className="mt-6 border-t border-border pt-4">
             <p className="text-xs tracking-widest text-foreground">
+              EMAIL DELIVERY HISTORY
+            </p>
+            <div className="mt-3 space-y-2">
+              {data.emails.slice(0, 10).map((email) => (
+                <div
+                  key={String(email.id)}
+                  className="border border-border p-3 text-xs"
+                >
+                  <div className="flex gap-3">
+                    <strong className="truncate text-foreground">
+                      {String(email.subject)}
+                    </strong>
+                    <span className="ml-auto uppercase text-muted-foreground">
+                      {String(email.provider_status ?? email.status)}
+                    </span>
+                  </div>
+                  <p className="mt-1 truncate text-muted-foreground">
+                    {String(email.email_type)} · {String(email.recipient)} ·{' '}
+                    {String(email.attempts)} attempt(s)
+                  </p>
+                  {email.last_error && (
+                    <p className="mt-1 text-destructive">
+                      {String(email.last_error)}
+                    </p>
+                  )}
+                </div>
+              ))}
+              {!data.emails.length && (
+                <p className="text-xs text-muted-foreground">
+                  No transactional emails have been recorded.
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="mt-6 border-t border-border pt-4">
+            <p className="text-xs tracking-widest text-foreground">
               CAPTURED EVIDENCE
             </p>
             {checks.slice(0, 5).map((c) => (

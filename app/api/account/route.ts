@@ -12,6 +12,7 @@ import {
   hashPassword,
   verifyPassword,
 } from '@/lib/passwords';
+import { waitUntil } from 'cloudflare:workers';
 
 export const dynamic = 'force-dynamic';
 const generic =
@@ -40,6 +41,37 @@ function appOrigin(env: ReturnType<typeof getRuntimeEnv>) {
     throw new Error('APP_ORIGIN must use HTTPS.');
   return url.origin;
 }
+function deliverQueuedEmails(env: ReturnType<typeof getRuntimeEnv>) {
+  waitUntil(
+    flushEmails(env)
+      .then((result) => {
+        if (result.failed)
+          console.warn('One or more queued account emails will be retried', {
+            failed: result.failed,
+          });
+      })
+      .catch(() => {
+        console.warn('Queued account email delivery will be retried');
+      }),
+  );
+}
+function signInDetails(request: Request) {
+  const cf = (
+    request as Request & {
+      cf?: { city?: string; country?: string; region?: string };
+    }
+  ).cf;
+  const location = [cf?.city, cf?.region, cf?.country]
+    .filter(Boolean)
+    .join(', ');
+  const agent =
+    request.headers.get('user-agent') ?? 'Unknown browser or device';
+  return {
+    ip: request.headers.get('cf-connecting-ip') ?? 'Unavailable',
+    location: location || 'Unavailable',
+    device: agent.slice(0, 300),
+  };
+}
 async function limit(key: string) {
   const db = getRuntimeEnv().DB;
   const now = Date.now();
@@ -53,9 +85,32 @@ async function limit(key: string) {
   return (row?.attempts ?? 100) > 10;
 }
 export async function GET(request: Request) {
+  const user = await authenticatedUser(request);
+  const preferences = user
+    ? await getRuntimeEnv()
+        .DB.prepare(
+          `SELECT incident_alerts,team_activity,product_updates,digest_frequency
+           FROM email_preferences WHERE user_id=?`,
+        )
+        .bind(user.id)
+        .first<{
+          incident_alerts: number;
+          team_activity: number;
+          product_updates: number;
+          digest_frequency: string;
+        }>()
+    : null;
   return json({
-    user: await authenticatedUser(request),
+    user,
     emailConfigured: emailConfigured(getRuntimeEnv()),
+    preferences: user
+      ? {
+          incidentAlerts: Boolean(preferences?.incident_alerts ?? 1),
+          teamActivity: Boolean(preferences?.team_activity ?? 1),
+          productUpdates: Boolean(preferences?.product_updates ?? 0),
+          digestFrequency: preferences?.digest_frequency ?? 'none',
+        }
+      : null,
   });
 }
 export async function POST(request: Request) {
@@ -80,6 +135,33 @@ export async function POST(request: Request) {
           .bind(await tokenHash(raw))
           .run();
       return json({ ok: true }, 200, { 'Set-Cookie': cookie(request, '', 0) });
+    }
+    if (action === 'update_preferences') {
+      const user = await authenticatedUser(request);
+      if (!user) return json({ error: 'Authentication required' }, 401);
+      const digest = ['none', 'daily', 'weekly'].includes(body.digestFrequency)
+        ? body.digestFrequency
+        : 'none';
+      await env.DB.prepare(
+        `INSERT INTO email_preferences
+         (user_id,incident_alerts,team_activity,product_updates,digest_frequency)
+         VALUES (?,?,?,?,?)
+         ON CONFLICT(user_id) DO UPDATE SET
+           incident_alerts=excluded.incident_alerts,
+           team_activity=excluded.team_activity,
+           product_updates=excluded.product_updates,
+           digest_frequency=excluded.digest_frequency,
+           updated_at=CURRENT_TIMESTAMP`,
+      )
+        .bind(
+          user.id,
+          body.incidentAlerts ? 1 : 0,
+          body.teamActivity ? 1 : 0,
+          body.productUpdates ? 1 : 0,
+          digest,
+        )
+        .run();
+      return json({ message: 'Email preferences updated successfully.' });
     }
     const email = String(body.email ?? '')
       .trim()
@@ -110,6 +192,11 @@ export async function POST(request: Request) {
           { error: 'This link is invalid, expired, or already used.' },
           400,
         );
+      const tokenAccount = await env.DB.prepare(
+        'SELECT email,name FROM accounts WHERE id=?',
+      )
+        .bind(token.user_id)
+        .first<{ email: string; name: string }>();
       const encoded =
         action === 'reset' ? await hashPassword(body.password) : null;
       // Atomic condition ensures concurrent use of a reset token cannot update twice.
@@ -130,6 +217,17 @@ export async function POST(request: Request) {
           token.user_id,
         ),
       ]);
+      if (action === 'reset' && tokenAccount && emailConfigured(env)) {
+        await queueEmail(
+          env,
+          `account-${token.user_id}`,
+          tokenAccount.email,
+          `password-changed:${digest}`,
+          'Security confirmation: Your CrashLens password was changed',
+          `Dear ${tokenAccount.name},\n\nThis message is to confirm that the password associated with your CrashLens account was changed successfully. All existing sessions have been securely terminated.\n\nIf you made this change, no further action is required. If you did not authorize it, please contact your administrator immediately.\n\nYours sincerely,\nCrashLens Security Team`,
+        );
+        deliverQueuedEmails(env);
+      }
       return json({
         message:
           action === 'verify'
@@ -159,6 +257,14 @@ export async function POST(request: Request) {
       );
       if (!account || !valid)
         return json({ error: 'Invalid email or password.' }, 401);
+      if (!account.verified)
+        return json(
+          {
+            error:
+              'Please verify your email address before signing in. You may request a new verification email below.',
+          },
+          403,
+        );
       const token = randomToken();
       const digest = await tokenHash(token);
       const team = await ensureWorkspace(env.DB, account);
@@ -172,10 +278,10 @@ export async function POST(request: Request) {
         team,
         email,
         `login:${digest}`,
-        'Security notice: New sign-in to your CrashLens account',
-        `Dear ${account.name},\n\nWe are writing to confirm that a new sign-in to your CrashLens account was completed successfully.\n\nDate and time: ${new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeStyle: 'long', timeZone: 'UTC' }).format(new Date())} UTC\n\nIf you recognize this activity, no further action is required. If you did not sign in, please reset your password immediately. Resetting your password will securely end all existing sessions.\n\nKind regards,\nCrashLens Security Team`,
+        'Security notification: New sign-in to your CrashLens account',
+        `Dear ${account.name},\n\nThis message is to formally confirm that a new sign-in to your CrashLens account was completed successfully.\n\nDate and time: ${new Intl.DateTimeFormat('en-US', { dateStyle: 'long', timeStyle: 'long', timeZone: 'UTC' }).format(new Date())} UTC\nIP address: ${signInDetails(request).ip}\nApproximate location: ${signInDetails(request).location}\nBrowser or device: ${signInDetails(request).device}\n\nIf you authorized this activity, no further action is required. If you do not recognize this sign-in, please reset your password immediately. Resetting your password will securely terminate all existing sessions.\n\nYours sincerely,\nCrashLens Security Team`,
       );
-      await flushEmails(env);
+      deliverQueuedEmails(env);
       return json({ ok: true }, 200, {
         'Set-Cookie': cookie(request, token, 7 * 86400),
       });
@@ -193,6 +299,14 @@ export async function POST(request: Request) {
               'Enter your name and a password between 12 and 128 characters.',
           },
           400,
+        );
+      if (!emailConfigured(env))
+        return json(
+          {
+            error:
+              'Account registration is temporarily unavailable because email verification is not configured.',
+          },
+          503,
         );
       if (account)
         return json(
@@ -217,10 +331,27 @@ export async function POST(request: Request) {
           { error: 'An account already uses this email. Please sign in.' },
           409,
         );
+      const raw = randomToken();
+      const digest = await tokenHash(raw);
+      const link = `${appOrigin(env)}/account?mode=verify#token=${raw}`;
+      await env.DB.prepare(
+        'INSERT INTO account_tokens (token_hash,user_id,kind,expires_at) VALUES (?,?,?,?)',
+      )
+        .bind(digest, created.id, 'verify', Date.now() + 60 * 60000)
+        .run();
+      await queueEmail(
+        env,
+        `account-${created.id}`,
+        email,
+        `welcome:${created.id}`,
+        'Welcome to CrashLens — Please verify your email address',
+        `Dear ${name},\n\nWelcome to CrashLens.\n\nWe are pleased to confirm that your account has been created successfully. Before signing in, please verify ownership of your email address using the secure, single-use link below.\n\n${link}\n\nThis link will expire in 60 minutes. For the security of your account, please keep your sign-in credentials confidential. CrashLens will never ask you to disclose your password by email.\n\nIf you did not create this account, no action is required.\n\nYours sincerely,\nCrashLens Team`,
+      );
+      deliverQueuedEmails(env);
       return json(
         {
           message:
-            'Account created. You can sign in now—no email verification required.',
+            'Account created. Please check your email and verify your address before signing in.',
         },
         201,
       );
@@ -258,13 +389,13 @@ export async function POST(request: Request) {
       email,
       `${kind}:${digest}`,
       kind === 'reset'
-        ? 'CrashLens password reset request'
-        : 'Verify your CrashLens email',
+        ? 'Action required: Reset your CrashLens password'
+        : 'Action required: Verify your CrashLens email address',
       kind === 'reset'
-        ? `Dear ${name},\n\nWe received a request to reset the password for your CrashLens account. Please use the secure, single-use link below to create a new password.\n\n${link}\n\nFor your security, this link will expire in 30 minutes. If you did not request a password reset, you may safely disregard this email; your password will remain unchanged.\n\nKind regards,\nCrashLens Security Team`
-        : `Dear ${name},\n\nPlease verify your CrashLens email address using the secure, single-use link below.\n\n${link}\n\nThis link will expire in 60 minutes. If you did not request this verification, you may safely disregard this email.\n\nKind regards,\nCrashLens Security Team`,
+        ? `Dear ${name},\n\nWe received a request to reset the password associated with your CrashLens account. Please use the secure, single-use link below to create a new password.\n\n${link}\n\nFor your protection, this link will expire in 30 minutes. If you did not submit this request, no action is required; your existing password will remain unchanged.\n\nYours sincerely,\nCrashLens Security Team`
+        : `Dear ${name},\n\nThank you for using CrashLens. Please confirm ownership of your email address by using the secure, single-use link below.\n\n${link}\n\nThis link will expire in 60 minutes. If you did not request this verification, no action is required.\n\nYours sincerely,\nCrashLens Security Team`,
     );
-    await flushEmails(env);
+    deliverQueuedEmails(env);
     return json({ message: generic });
   } catch (error) {
     console.error(

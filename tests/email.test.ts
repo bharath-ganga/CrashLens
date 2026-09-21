@@ -81,6 +81,16 @@ void test('renders a branded password-reset email with a secure action', () => {
   assert.match(html, />Reset password securely</);
   assert.match(html, /Kind regards/);
   assert.match(html, /CrashLens Security Team/);
+  assert.match(html, /text-align:center/);
+  assert.match(html, /All rights reserved/);
+});
+
+void test('renders the CrashLens mark from the configured application origin', () => {
+  const html = buildBrandedEmailHtml('Security notice', 'Account activity.', {
+    appOrigin: 'https://crashlens.example/',
+  });
+
+  assert.match(html, /src="https:\/\/crashlens\.example\/crashlens-mark\.png"/);
 });
 
 void test('escapes untrusted email content before rendering HTML', () => {

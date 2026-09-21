@@ -17,6 +17,13 @@ export const metadata: Metadata = {
   title: 'CrashLens — Intelligent incident investigation',
   description:
     'AI-powered production error clustering, root-cause analysis, and incident timelines.',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.png', type: 'image/png', sizes: '32x32' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
   openGraph: {
     title: 'CrashLens — Intelligent incident investigation',
     description: 'See the cause. Fix it faster.',

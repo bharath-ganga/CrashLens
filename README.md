@@ -207,6 +207,11 @@ Important server-only variables:
 | `TURSO_AUTH_TOKEN`      | Server-only database authentication token                                     |
 | `RESEND_API_KEY`        | Server-only Resend key beginning with `re_`                                   |
 | `EMAIL_FROM`            | Sender on a verified domain, such as `CrashLens <alerts@mail.yourdomain.com>` |
+| `RESEND_WEBHOOK_SECRET` | Resend webhook signing secret for authenticated delivery events               |
+| `SUPPORT_EMAIL`         | Support address displayed in transactional email footers                      |
+| `PRIVACY_URL`           | Public privacy-notice URL displayed in transactional email footers            |
+| `COMPANY_NAME`          | Product or company name used in email branding                                |
+| `MONITOR_CRON_TOKEN`    | Random server-only token used by scheduled monitoring and email jobs          |
 | `APP_ORIGIN`            | Exact application origin used in account links                                |
 | `ADMIN_EMAILS`          | Comma-separated administrator email allowlist                                 |
 | `INGESTION_TOKEN`       | Protects machine log, trace, and deployment ingestion                         |

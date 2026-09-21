@@ -10,12 +10,14 @@ import {
   emailConfigured,
   flushEmails,
   queueEmail,
+  queueTeamEmail,
   resendConfiguration,
 } from '@/db/email';
 import {
   MAX_LOG_FILE_MB,
   MAX_WORKSPACE_PAYLOAD_BYTES,
 } from '@/lib/upload-limits';
+import { waitUntil } from 'cloudflare:workers';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +30,10 @@ function json(data: unknown, status = 200) {
 
 function textValue(value: unknown, fallback = '') {
   return typeof value === 'string' ? value : fallback;
+}
+
+function deliverQueuedEmails(runtime: ReturnType<typeof getRuntimeEnv>) {
+  waitUntil(flushEmails(runtime).catch(() => undefined));
 }
 
 async function context(request: Request) {
@@ -113,6 +119,38 @@ export async function POST(request: Request) {
   const body = (await request.json()) as Record<string, unknown>;
   const action = textValue(body.action);
 
+  if (action === 'accept_invite') {
+    const inviteId = textValue(body.inviteId);
+    const invite = await ctx.runtime.DB.prepare(
+      `SELECT id,team_id,role FROM team_invites
+       WHERE id=? AND lower(email)=lower(?) AND status='pending'`,
+    )
+      .bind(inviteId, ctx.user.email)
+      .first<{ id: string; team_id: string; role: string }>();
+    if (!invite)
+      return json(
+        { error: 'This invitation is invalid, expired, or already accepted.' },
+        404,
+      );
+    await ctx.runtime.DB.batch([
+      ctx.runtime.DB.prepare(
+        'INSERT OR IGNORE INTO team_members (team_id,user_id,role) VALUES (?,?,?)',
+      ).bind(invite.team_id, ctx.user.id, invite.role),
+      ctx.runtime.DB.prepare(
+        "UPDATE team_invites SET status='accepted' WHERE id=?",
+      ).bind(invite.id),
+    ]);
+    await audit(
+      ctx.runtime.DB,
+      invite.team_id,
+      ctx.user.id,
+      'team.invite_accepted',
+      'invite',
+      invite.id,
+    );
+    return json({ ok: true, teamId: invite.team_id });
+  }
+
   if (action === 'save_analysis') {
     return json(
       {
@@ -128,6 +166,12 @@ export async function POST(request: Request) {
     const allowed = ['investigating', 'monitoring', 'resolved'];
     if (!incidentId || !allowed.includes(status))
       return json({ error: 'Invalid incident update' }, 400);
+    const incident = await ctx.runtime.DB.prepare(
+      'SELECT title,service,severity FROM incidents WHERE id=? AND team_id=?',
+    )
+      .bind(incidentId, ctx.teamId)
+      .first<{ title: string; service: string; severity: string }>();
+    if (!incident) return json({ error: 'Incident not found' }, 404);
     await ctx.runtime.DB.prepare(
       'UPDATE incidents SET status = ?, assigned_to = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND team_id = ?',
     )
@@ -142,6 +186,15 @@ export async function POST(request: Request) {
       incidentId,
       { status, assignedTo: body.assignedTo ?? null },
     );
+    await queueTeamEmail(
+      ctx.runtime,
+      ctx.teamId,
+      `incident-status:${incidentId}:${status}`,
+      `Incident ${status}: ${incident.title}`,
+      `Dear CrashLens team member,\n\nThis message is to confirm that the following incident has been updated.\n\nIncident: ${incident.title}\nService: ${incident.service}\nSeverity: ${incident.severity.toUpperCase()}\nCurrent status: ${status.toUpperCase()}\nUpdated by: ${ctx.user.name}\n\nPlease open CrashLens to review the incident timeline and supporting evidence.\n\nYours sincerely,\nCrashLens Operations Team`,
+      'incident',
+    );
+    deliverQueuedEmails(ctx.runtime);
     return json({ ok: true });
   }
   if (action === 'comment') {
@@ -175,11 +228,14 @@ export async function POST(request: Request) {
     const email = textValue(body.email).trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       return json({ error: 'Enter a valid email' }, 400);
+    const role = textValue(body.role, 'member');
+    if (!['member', 'admin'].includes(role))
+      return json({ error: 'Choose a valid role' }, 400);
     const id = crypto.randomUUID();
     await ctx.runtime.DB.prepare(
       'INSERT INTO team_invites (id, team_id, email, role, invited_by) VALUES (?, ?, ?, ?, ?)',
     )
-      .bind(id, ctx.teamId, email, textValue(body.role, 'member'), ctx.user.id)
+      .bind(id, ctx.teamId, email, role, ctx.user.id)
       .run();
     await audit(
       ctx.runtime.DB,
@@ -190,6 +246,21 @@ export async function POST(request: Request) {
       id,
       { email },
     );
+    if (emailConfigured(ctx.runtime)) {
+      const origin =
+        ctx.runtime.APP_ORIGIN?.replace(/\/$/, '') ??
+        new URL(request.url).origin;
+      const link = `${origin}/account?mode=login&invite=${encodeURIComponent(id)}`;
+      await queueEmail(
+        ctx.runtime,
+        ctx.teamId,
+        email,
+        `team-invite:${id}`,
+        'You have been invited to join a CrashLens workspace',
+        `Dear Colleague,\n\n${ctx.user.name} has invited you to join the CrashLens Operations workspace with the role of ${role}.\n\nTo accept this invitation, please sign in or create an account using this email address. Your verified account will be added to the workspace automatically.\n\n${link}\n\nFor your security, this invitation can be accepted only by an account verified with ${email}. If you were not expecting this invitation, no action is required.\n\nYours sincerely,\nCrashLens Team`,
+      );
+      deliverQueuedEmails(ctx.runtime);
+    }
     return json({ ok: true, id }, 201);
   }
   if (action === 'connector') {

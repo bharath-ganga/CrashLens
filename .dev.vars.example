@@ -5,6 +5,10 @@ RESEND_API_KEY=
 # Development only: Resend permits onboarding@resend.dev to send test mail to
 # the email address associated with your Resend account.
 EMAIL_FROM=CrashLens <onboarding@resend.dev>
+RESEND_WEBHOOK_SECRET=
+SUPPORT_EMAIL=support@yourdomain.com
+PRIVACY_URL=https://yourdomain.com/privacy
+COMPANY_NAME=CrashLens
 APP_ORIGIN=http://localhost:3000
 ADMIN_EMAILS=you@example.com
 

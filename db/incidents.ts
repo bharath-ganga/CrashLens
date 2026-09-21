@@ -133,8 +133,9 @@ export async function saveAnalysis(
       env,
       teamId,
       `incident:${incidentId}`,
-      `CrashLens: ${redactSensitiveData(incident.title).slice(0, 120)}`,
-      `${incident.severity.toUpperCase()} incident in ${redactSensitiveData(incident.service)}.\n${incident.logs.length} related logs.\nOpen CrashLens History to investigate.\nIncident: ${incidentId}`,
+      `Incident detected: ${redactSensitiveData(incident.title).slice(0, 120)}`,
+      `Dear CrashLens team member,\n\nCrashLens has detected a production incident that requires review.\n\nIncident: ${redactSensitiveData(incident.title)}\nService: ${redactSensitiveData(incident.service)}\nSeverity: ${incident.severity.toUpperCase()}\nRelated log entries: ${incident.logs.length}\nIncident reference: ${incidentId}\n\nPlease open CrashLens to review the incident timeline, supporting evidence, and recommended next actions.\n\nYours sincerely,\nCrashLens Operations Team`,
+      'incident',
     );
   }
   await audit(

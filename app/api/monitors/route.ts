@@ -109,7 +109,12 @@ export async function GET(request: Request) {
         .bind(ctx.team, now - 90 * 86400000)
         .all(),
       ctx.env.DB.prepare(
-        'SELECT id,recipient,subject,status,attempts,last_error,created_at FROM email_outbox WHERE team_id=? ORDER BY created_at DESC LIMIT 30',
+        `SELECT e.id,e.recipient,e.subject,e.status,e.attempts,e.last_error,e.created_at,
+                CASE WHEN instr(e.event_key,':')>0 THEN substr(e.event_key,1,instr(e.event_key,':')-1) ELSE e.event_key END AS email_type,
+                pm.last_event AS provider_status,pm.last_event_at
+         FROM email_outbox e
+         LEFT JOIN email_provider_messages pm ON pm.outbox_id=e.id
+         WHERE e.team_id=? ORDER BY e.created_at DESC LIMIT 30`,
       )
         .bind(ctx.team)
         .all(),

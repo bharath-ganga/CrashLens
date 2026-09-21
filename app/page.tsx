@@ -43,6 +43,7 @@ import {
   Send,
   Server,
   Sparkles,
+  Trash2,
   Upload,
   X,
 } from 'lucide-react';
@@ -82,6 +83,17 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { buildReport, Incident, LogEntry } from '@/lib/log-analyzer';
 import { MAX_LOG_FILE_BYTES, MAX_LOG_FILE_MB } from '@/lib/upload-limits';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const initialLogs: LogEntry[] = [];
 const initialIncidents: Incident[] = [];
@@ -202,11 +214,14 @@ export default function Home() {
   const [incidents, setIncidents] = useState<Incident[]>(initialIncidents);
   const [selectedId, setSelectedId] = useState(initialIncidents[0]?.id ?? '');
   const [filename, setFilename] = useState('');
+  const [ingestionId, setIngestionId] = useState('');
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState<'analysis' | 'timeline' | 'logs'>('analysis');
   const [processing, setProcessing] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [removeLogsOpen, setRemoveLogsOpen] = useState(false);
+  const [removingLogs, setRemovingLogs] = useState(false);
   const [error, setError] = useState('');
   const [resolved, setResolved] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
@@ -315,9 +330,21 @@ export default function Home() {
         : (dataset.incidents[0]?.id ?? ''),
     );
     setFilename(dataset.ingestion.filename);
+    setIngestionId(dataset.ingestion.id);
     setDatasetStats(dataset.stats);
     setDatasetActivity(dataset.activity);
     setDatasetServices(dataset.services);
+  }, []);
+  const clearDataset = useCallback(() => {
+    setLogs([]);
+    setIncidents([]);
+    setSelectedId('');
+    setFilename('');
+    setIngestionId('');
+    setResolved([]);
+    setDatasetStats({ total: 0, errors: 0, services: 0 });
+    setDatasetActivity([]);
+    setDatasetServices([]);
   }, []);
   const loadWorkspace = useCallback(
     async (quiet = false) => {
@@ -342,9 +369,12 @@ export default function Home() {
             dataset: Dataset | null;
           };
           if (logData.dataset) applyDataset(logData.dataset);
+          else clearDataset();
         }
-        setHistoryIncidentId(
-          (current) => current || String(data.incidents[0]?.id ?? ''),
+        setHistoryIncidentId((current) =>
+          data.incidents.some((incident) => String(incident.id) === current)
+            ? current
+            : String(data.incidents[0]?.id ?? ''),
         );
         if (healthResponse.ok)
           setHealth(
@@ -362,7 +392,7 @@ export default function Home() {
         if (!quiet) setWorkspaceBusy(false);
       }
     },
-    [applyDataset],
+    [applyDataset, clearDataset],
   );
 
   useEffect(() => {
@@ -450,6 +480,37 @@ export default function Home() {
     if (file) void processFile(file);
   }
 
+  async function removeCurrentLogs() {
+    if (!ingestionId) return;
+    setRemovingLogs(true);
+    setError('');
+    try {
+      const response = await fetch(
+        `/api/logs?ingestionId=${encodeURIComponent(ingestionId)}`,
+        { method: 'DELETE' },
+      );
+      const result = (await response.json()) as {
+        dataset?: Dataset | null;
+        error?: string;
+      };
+      if (!response.ok)
+        throw new Error(result.error ?? 'Uploaded logs could not be removed.');
+      if (result.dataset) applyDataset(result.dataset);
+      else clearDataset();
+      setRemoveLogsOpen(false);
+      await loadWorkspace(true);
+      setWorkspaceMessage('Uploaded logs and derived incident data removed');
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : 'Uploaded logs could not be removed.',
+      );
+    } finally {
+      setRemovingLogs(false);
+    }
+  }
+
   return (
     <WorkspaceShell
       view={view}
@@ -461,6 +522,7 @@ export default function Home() {
       dateRange={dateRange}
       onDateRange={setDateRange}
       onUpload={() => setUploadOpen(true)}
+      onRemoveLogs={() => setRemoveLogsOpen(true)}
       onCritical={() => {
         setView('incidents');
         setIncidentFilter('critical');
@@ -1175,6 +1237,36 @@ export default function Home() {
           </div>
         </DialogContent>
       </Dialog>
+      <AlertDialog open={removeLogsOpen} onOpenChange={setRemoveLogsOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia className="text-destructive">
+              <Trash2 />
+            </AlertDialogMedia>
+            <AlertDialogTitle>Remove uploaded logs?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes {filename || 'this source'}, its stored
+              log records, and all incidents derived from it. This action cannot
+              be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removingLogs}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={removingLogs}
+              onClick={(event) => {
+                event.preventDefault();
+                void removeCurrentLogs();
+              }}
+            >
+              {removingLogs ? 'Removing…' : 'Remove logs'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </WorkspaceShell>
   );
 }

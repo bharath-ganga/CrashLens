@@ -17,6 +17,7 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  Trash2,
   Upload,
   Users,
   ScanSearch,
@@ -89,6 +90,7 @@ type Props = {
   dateRange: string;
   onDateRange: (value: string) => void;
   onUpload: () => void;
+  onRemoveLogs: () => void;
   onCritical: () => void;
   criticalCount: number;
   user?: { name: string; email: string };
@@ -101,6 +103,7 @@ function Navigation({
   view,
   onNavigate,
   onUpload,
+  onRemoveLogs,
   user,
   admin,
   filename,
@@ -193,6 +196,19 @@ function Navigation({
             <Upload />
             Upload source
           </Button>
+          {filename && (
+            <Button
+              variant="ghost"
+              className="w-full text-destructive hover:text-destructive"
+              onClick={() => {
+                setOpenMobile(false);
+                onRemoveLogs();
+              }}
+            >
+              <Trash2 />
+              Remove logs
+            </Button>
+          )}
         </div>
         <SidebarMenu>
           <SidebarMenuItem>

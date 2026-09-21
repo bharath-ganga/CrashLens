@@ -14,6 +14,10 @@ export type CrashLensEnv = Cloudflare.Env & {
   INGESTION_TOKEN?: string;
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
+  RESEND_WEBHOOK_SECRET?: string;
+  SUPPORT_EMAIL?: string;
+  PRIVACY_URL?: string;
+  COMPANY_NAME?: string;
   MONITOR_CRON_TOKEN?: string;
   APP_ORIGIN?: string;
   PAGERDUTY_ROUTING_KEY?: string;
@@ -77,11 +81,13 @@ export async function ensureWorkspace(
   user: { id: string; email: string; name: string },
 ) {
   const membership = await db
-    .prepare('SELECT team_id FROM team_members WHERE user_id = ? LIMIT 1')
+    .prepare(
+      'SELECT team_id FROM team_members WHERE user_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1',
+    )
     .bind(user.id)
     .first<{ team_id: string }>();
   const teamId = membership?.team_id ?? `team-${user.id}`;
-  await db.batch([
+  const statements = [
     db
       .prepare(
         'INSERT INTO users (id, email, name) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET email = excluded.email, name = excluded.name',
@@ -94,10 +100,11 @@ export async function ensureWorkspace(
       .bind(teamId, 'CrashLens Operations', user.id),
     db
       .prepare(
-        "INSERT OR IGNORE INTO team_members (team_id, user_id, role) VALUES (?, ?, 'owner')",
+        'INSERT OR IGNORE INTO team_members (team_id, user_id, role) VALUES (?, ?, ?)',
       )
-      .bind(teamId, user.id),
-  ]);
+      .bind(teamId, user.id, 'owner'),
+  ];
+  await db.batch(statements);
   return teamId;
 }
 
